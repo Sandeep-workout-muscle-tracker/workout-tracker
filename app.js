@@ -10,6 +10,8 @@ const VIEWS = [
 
 let currentView = "train";
 let selectedSubFilter = null;
+let lastSyncStatus = "local-only";
+let lastSyncDetail = null;
 
 function el(id) { return document.getElementById(id); }
 
@@ -29,7 +31,7 @@ function renderShell() {
         </div>
         <div class="sync-indicator" id="sync-indicator">
           <span class="sync-dot" id="sync-dot"></span>
-          <span id="sync-text">Loading…</span>
+          <span id="sync-text">…</span>
         </div>
       </nav>
       <main class="main-panel" id="main-panel"></main>
@@ -43,6 +45,7 @@ function renderShell() {
     });
   });
 
+  updateSyncIndicator(lastSyncStatus, lastSyncDetail);
   renderView();
 }
 
@@ -261,7 +264,11 @@ function updateSyncIndicator(status, detail) {
   text.textContent = label;
 }
 
-onSyncStatus(updateSyncIndicator);
+onSyncStatus((status, detail) => {
+  lastSyncStatus = status;
+  lastSyncDetail = detail;
+  updateSyncIndicator(status, detail);
+});
 
 initStorage().then(() => {
   renderShell();
