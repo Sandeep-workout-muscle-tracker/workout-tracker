@@ -179,7 +179,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 /* ---------- TRAIN VIEW ---------- */
-.train-layout { display: grid; grid-template-columns: 420px 1fr; gap: 28px; align-items: start; }
+.train-layout { display: grid; grid-template-columns: 460px 1fr; gap: 28px; align-items: start; }
 
 .map-panel {
   background: var(--panel);
@@ -190,22 +190,16 @@ button, input, select, textarea { font-family: inherit; }
   top: 32px;
 }
 
-.map-toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
-.view-toggle-btn {
+.map-canvas { display: flex; gap: 8px; justify-content: center; }
+.map-figure { flex: 1; min-width: 0; text-align: center; }
+.map-figure-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.08em;
-  background: transparent;
-  border: 1px solid var(--line);
+  letter-spacing: 0.12em;
   color: var(--muted);
-  padding: 6px 14px;
-  border-radius: var(--radius);
-  cursor: pointer;
+  margin-bottom: 4px;
 }
-.view-toggle-btn.active { color: var(--accent-2); border-color: var(--accent-2); }
-
-.map-canvas { display: flex; justify-content: center; }
-.body-svg { width: 100%; max-width: 340px; height: auto; }
+.body-svg { width: 100%; max-width: 200px; height: auto; }
 .chassis { fill: none; stroke: var(--line-bright); stroke-width: 1.5; }
 .muscle-region {
   fill: var(--accent-2-soft);
