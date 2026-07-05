@@ -65,15 +65,28 @@ async function fetchRemote() {
   if (res.status === 404) {
     return { data: DEFAULT_DATA(), sha: null };
   }
+  const rawText = await res.text();
   if (!res.ok) {
-    const errJson = await res.json().catch(() => ({}));
-    throw new Error(errJson.message ? `GitHub GET ${res.status}: ${errJson.message}` : `github_get_failed_${res.status}`);
+    let msg = rawText.slice(0, 200) || "(empty response body)";
+    try { msg = JSON.parse(rawText).message || msg; } catch (e) { /* keep raw snippet */ }
+    throw new Error(`GitHub GET failed — status ${res.status}: ${msg}`);
   }
-  const json = await res.json();
-  const content = b64ToUtf8(json.content.replace(/\n/g, ""));
+  if (!rawText.trim()) {
+    throw new Error(`GitHub GET returned status ${res.status} with an empty body (unexpected — check token scope/repo access).`);
+  }
+  let json;
+  try {
+    json = JSON.parse(rawText);
+  } catch (e) {
+    throw new Error(`GitHub GET returned non-JSON (status ${res.status}): ${rawText.slice(0, 200)}`);
+  }
+  if (!json.content) {
+    throw new Error(`GitHub response had no file content — is "${settings.path || "workout-data.json"}" actually a file (not a folder)?`);
+  }
+  const decoded = b64ToUtf8(json.content.replace(/\n/g, ""));
   let parsed;
   try {
-    parsed = content.trim() ? JSON.parse(content) : DEFAULT_DATA();
+    parsed = decoded.trim() ? JSON.parse(decoded) : DEFAULT_DATA();
   } catch (e) {
     parsed = DEFAULT_DATA();
   }
@@ -107,10 +120,12 @@ async function pushRemote(data) {
     },
     body: JSON.stringify(body),
   });
+  const rawText = await res.text();
   if (!res.ok) {
-    const errJson = await res.json().catch(() => ({}));
+    let msg = rawText.slice(0, 200) || "(empty response body)";
+    try { msg = JSON.parse(rawText).message || msg; } catch (e) { /* keep raw snippet */ }
     // If sha mismatch (someone else wrote in the meantime), refetch and retry once
-    if (res.status === 409 || (errJson.message || "").includes("sha")) {
+    if (res.status === 409 || msg.includes("sha")) {
       const remote = await fetchRemote();
       lastSha = remote.sha;
       body.sha = remote.sha;
@@ -123,14 +138,18 @@ async function pushRemote(data) {
         },
         body: JSON.stringify(body),
       });
-      if (!retry.ok) throw new Error("github_put_failed_retry");
-      const retryJson = await retry.json();
+      const retryText = await retry.text();
+      if (!retry.ok) throw new Error(`GitHub PUT retry failed — status ${retry.status}: ${retryText.slice(0, 200) || "(empty body)"}`);
+      const retryJson = JSON.parse(retryText);
       lastSha = retryJson.content.sha;
       return;
     }
-    throw new Error(`github_put_failed_${res.status}`);
+    throw new Error(`GitHub PUT failed — status ${res.status}: ${msg}`);
   }
-  const json = await res.json();
+  if (!rawText.trim()) {
+    throw new Error(`GitHub PUT returned status ${res.status} with an empty body (unexpected).`);
+  }
+  const json = JSON.parse(rawText);
   lastSha = json.content.sha;
 }
 
