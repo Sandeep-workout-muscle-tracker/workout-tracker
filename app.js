@@ -231,9 +231,15 @@ function renderSettingsView(panel) {
     saveSettings(readSettingsForm());
     const status = el("settings-status");
     status.textContent = "Syncing…";
+    status.className = "settings-status";
     await initStorage();
-    status.textContent = "✓ Saved. Data will sync from now on.";
-    status.className = "settings-status status-ok";
+    if (lastSyncStatus === "error") {
+      status.textContent = "✗ Sync failed: " + (lastSyncDetail || "unknown error");
+      status.className = "settings-status status-error";
+    } else {
+      status.textContent = "✓ Saved. Data will sync from now on.";
+      status.className = "settings-status status-ok";
+    }
   });
 
   function readSettingsForm() {
