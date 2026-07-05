@@ -1,6 +1,7 @@
 // Anatomical-style body diagram (front + back shown together, side by side) with
 // clickable, rounded panels for every sub-muscle.
 
+
 const REGIONS = {
   front: [
     { sub: "delts_front", shape: "ellipse", cx: 108, cy: 118, rx: 28, ry: 26 },
