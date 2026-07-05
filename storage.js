@@ -66,11 +66,18 @@ async function fetchRemote() {
     return { data: DEFAULT_DATA(), sha: null };
   }
   if (!res.ok) {
-    throw new Error(`github_get_failed_${res.status}`);
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.message ? `GitHub GET ${res.status}: ${errJson.message}` : `github_get_failed_${res.status}`);
   }
   const json = await res.json();
   const content = b64ToUtf8(json.content.replace(/\n/g, ""));
-  return { data: JSON.parse(content), sha: json.sha };
+  let parsed;
+  try {
+    parsed = content.trim() ? JSON.parse(content) : DEFAULT_DATA();
+  } catch (e) {
+    parsed = DEFAULT_DATA();
+  }
+  return { data: parsed, sha: json.sha };
 }
 
 let lastSha = null;
