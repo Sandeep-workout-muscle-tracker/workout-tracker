@@ -1,5 +1,6 @@
 // Monthly calendar for planning AND logging workouts on the same day panel.
 
+
 let calCursor = new Date(); // first render = current month
 
 function fmtDate(y, m, d) {
