@@ -1,3 +1,70 @@
+// Monthly calendar for planning workouts ahead of time.
+
+let calCursor = new Date(); // first render = current month
+
+function fmtDate(y, m, d) {
+  const mm = String(m + 1).padStart(2, "0");
+  const dd = String(d).padStart(2, "0");
+  return `${y}-${mm}-${dd}`;
+}
+
+// Safety wrapper in case todayStr() from tracker.js isn't loaded yet
+function getTodayStr() {
+  if (typeof todayStr === "function") return todayStr();
+  const d = new Date();
+  return fmtDate(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function renderCalendar(container) {
+  const y = calCursor.getFullYear();
+  const m = calCursor.getMonth();
+  const first = new Date(y, m, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const monthLabel = calCursor.toLocaleString("default", { month: "long", year: "numeric" });
+  const data = getData();
+  const today = getTodayStr();
+
+  let cells = "";
+  for (let i = 0; i < startDow; i++) cells += `<div class="cal-cell cal-empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = fmtDate(y, m, d);
+    const plan = data.plans[dateStr];
+    const hasLog = data.logs.some(l => l.date === dateStr);
+    cells += `
+      <div class="cal-cell ${dateStr === today ? "cal-today" : ""}" data-date="${dateStr}">
+        <div class="cal-day-num">${d}</div>
+        ${plan ? `<div class="cal-plan-chip">${plan.title || "Planned"}</div>` : ""}
+        ${hasLog ? `<div class="cal-log-dot" title="Workout logged"></div>` : ""}
+      </div>`;
+  }
+
+  container.innerHTML = `
+    <div class="cal-header">
+      <button class="btn btn-ghost" id="cal-prev">‹</button>
+      <div class="cal-month-label">${monthLabel}</div>
+      <button class="btn btn-ghost" id="cal-next">›</button>
+    </div>
+    <div class="cal-grid cal-grid-dow">
+      ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => `<div class="cal-dow">${d}</div>`).join("")}
+    </div>
+    <div class="cal-grid">${cells}</div>
+    <div id="cal-day-panel"></div>
+  `;
+
+  container.querySelector("#cal-prev").addEventListener("click", () => {
+    calCursor = new Date(y, m - 1, 1);
+    renderCalendar(container);
+  });
+  container.querySelector("#cal-next").addEventListener("click", () => {
+    calCursor = new Date(y, m + 1, 1);
+    renderCalendar(container);
+  });
+  container.querySelectorAll(".cal-cell[data-date]").forEach(cell => {
+    cell.addEventListener("click", () => renderDayPanel(container, cell.dataset.date));
+  });
+}
+
 function renderDayPanel(container, dateStr) {
   const panel = container.querySelector("#cal-day-panel");
   const data = getData();
@@ -16,7 +83,7 @@ function renderDayPanel(container, dateStr) {
       <label class="field-label">Plan label</label>
       <input type="text" id="plan-title" class="input" placeholder="e.g. Push — Chest & Shoulders" value="${plan.title || ""}" />
       
-      <label class="field-label">Filter by Primary Muscle</label>
+      <label class="field-label" style="margin-top: 16px;">Filter by Primary Muscle</label>
       <div class="category-filters">
         ${primaryFiltersHtml}
       </div>
@@ -122,17 +189,14 @@ function renderDayPanel(container, dateStr) {
   panel.querySelector("#log-workout").addEventListener("click", () => {
     const title = panel.querySelector("#plan-title").value.trim();
     save(data => {
-      // 1. Save the plan
       data.plans[dateStr] = { title, exerciseIds };
       
-      // 2. Push to logs (if not already logged today)
       const hasLog = data.logs.some(l => l.date === dateStr);
       if (!hasLog) {
         data.logs.push({
           id: Date.now().toString(),
           date: dateStr,
           title: title || "Calendar Logged Workout",
-          // Initializes the exercises with empty sets for tracker.js
           exercises: exerciseIds.map(exId => ({ exId: exId, sets: [] })) 
         });
       }
