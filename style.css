@@ -18,7 +18,6 @@
   --font-mono: "IBM Plex Mono", monospace;
 }
 
-
 * { box-sizing: border-box; }
 
 html, body {
@@ -183,7 +182,7 @@ button, input, select, textarea { font-family: inherit; }
 .train-layout { display: grid; grid-template-columns: 460px 1fr; gap: 28px; align-items: start; }
 
 .map-panel {
-  background: var(--panel);
+  background: #F4F2EC;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px;
@@ -197,21 +196,21 @@ button, input, select, textarea { font-family: inherit; }
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.12em;
-  color: var(--muted);
+  color: #8A8A82;
   margin-bottom: 4px;
 }
 .body-svg { width: 100%; max-width: 200px; height: auto; }
-.chassis { fill: none; stroke: var(--line-bright); stroke-width: 1.5; }
+.outline { fill: none; stroke: #3D4148; stroke-width: 1.6; }
 .muscle-region {
-  fill: var(--accent-2-soft);
-  stroke: var(--line-bright);
+  fill: #D8D6CF;
+  stroke: #3D4148;
   stroke-width: 1;
   cursor: pointer;
   transition: fill 0.12s ease, stroke 0.12s ease;
 }
-.muscle-region:focus { outline: none; stroke: var(--accent-2); stroke-width: 2; }
-.muscle-region.hovered { fill: var(--accent-2-soft); stroke: var(--accent-2); }
-.muscle-region.selected { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+.muscle-region:focus { outline: none; stroke: var(--accent); stroke-width: 2; }
+.muscle-region.hovered { fill: #c7c4ba; }
+.muscle-region.selected { fill: var(--accent); stroke: #a83a22; stroke-width: 1.5; }
 
 .map-caption { color: var(--muted); font-size: 12px; margin-top: 10px; text-align: center; }
 
@@ -329,14 +328,55 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: var(--radius); padding: 18px;
 }
 .day-panel-title { font-family: var(--font-mono); color: var(--accent-2); margin-bottom: 12px; }
+.day-panel-subtitle { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+.day-panel-divider { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
 .plan-ex-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .plan-ex-chip {
   background: var(--panel); border: 1px solid var(--line-bright); padding: 6px 10px; border-radius: 2px;
-  font-size: 12px; cursor: pointer;
+  font-size: 12px; display: flex; align-items: center; gap: 8px;
 }
-.plan-ex-chip:hover { border-color: var(--accent); }
-.plan-ex-chip .remove-x { color: var(--muted); }
+.plan-ex-chip .remove-x { color: var(--muted); cursor: pointer; }
+.plan-ex-chip .remove-x:hover { color: var(--accent); }
 .day-panel-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+.group-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.group-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-bright);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.group-chip:hover { border-color: var(--accent-2); color: var(--accent-2); }
+.group-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.browse-group { margin-bottom: 16px; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.browse-group-title { font-family: var(--font-display); font-size: 15px; color: var(--accent-2); margin-bottom: 10px; }
+.browse-sub-row { margin-bottom: 10px; }
+.browse-sub-row:last-child { margin-bottom: 0; }
+.browse-sub-label {
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px;
+}
+.browse-sub-exercises { display: flex; flex-wrap: wrap; gap: 6px; }
+.ex-chip-add {
+  font-size: 12px; background: var(--panel); border: 1px solid var(--line-bright);
+  color: var(--text); padding: 6px 10px; border-radius: 2px; cursor: pointer;
+}
+.ex-chip-add:hover { border-color: var(--accent-2); }
+.ex-chip-add.added { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+.ex-chip-equip { color: var(--muted); font-family: var(--font-mono); font-size: 10px; }
+
+.day-log-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid var(--line);
+}
+.day-log-row:last-child { border-bottom: none; }
+.day-log-name { font-size: 13px; }
 
 /* ---------- NUTRITION VIEW ---------- */
 .nutrition-add-row { display: flex; gap: 10px; align-items: flex-start; }
