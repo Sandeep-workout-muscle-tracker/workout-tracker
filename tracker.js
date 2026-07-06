@@ -51,14 +51,15 @@ function renderExerciseList(container, filterSub, onLog) {
   });
 }
 
-function renderLogForm(container, exerciseId, onSaved) {
+function renderLogForm(container, exerciseId, onSaved, presetDate) {
   const name = exerciseName(exerciseId);
+  const dateValue = presetDate || todayStr();
   container.innerHTML = `
     <div class="log-form-backdrop">
       <div class="log-form">
         <div class="log-form-title">Log — ${name}</div>
         <label class="field-label">Date</label>
-        <input type="date" id="log-date" value="${todayStr()}" class="input" />
+        <input type="date" id="log-date" value="${dateValue}" class="input" />
         <label class="field-label">Sets</label>
         <div id="sets-rows"></div>
         <button class="btn btn-ghost" id="add-set-row">+ Add set</button>
