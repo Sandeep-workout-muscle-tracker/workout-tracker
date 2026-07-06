@@ -8,6 +8,7 @@ function fmtDate(y, m, d) {
   return `${y}-${mm}-${dd}`;
 }
 
+
 function renderCalendar(container) {
   try {
     const y = calCursor.getFullYear();
