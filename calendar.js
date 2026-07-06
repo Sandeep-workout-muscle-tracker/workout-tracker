@@ -1,4 +1,4 @@
-// Monthly calendar for planning workouts ahead of time.
+// Monthly calendar for planning AND logging workouts on the same day panel.
 
 let calCursor = new Date(); // first render = current month
 
@@ -23,12 +23,12 @@ function renderCalendar(container) {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = fmtDate(y, m, d);
     const plan = data.plans[dateStr];
-    const hasLog = data.logs.some(l => l.date === dateStr);
+    const logCount = data.logs.filter(l => l.date === dateStr).length;
     cells += `
       <div class="cal-cell ${dateStr === today ? "cal-today" : ""}" data-date="${dateStr}">
         <div class="cal-day-num">${d}</div>
         ${plan ? `<div class="cal-plan-chip">${plan.title || "Planned"}</div>` : ""}
-        ${hasLog ? `<div class="cal-log-dot" title="Workout logged"></div>` : ""}
+        ${logCount ? `<div class="cal-log-dot" title="${logCount} exercise(s) logged"></div>` : ""}
       </div>`;
   }
 
@@ -43,6 +43,7 @@ function renderCalendar(container) {
     </div>
     <div class="cal-grid">${cells}</div>
     <div id="cal-day-panel"></div>
+    <div id="cal-log-modal-slot"></div>
   `;
 
   container.querySelector("#cal-prev").addEventListener("click", () => {
@@ -60,48 +61,167 @@ function renderCalendar(container) {
 
 function renderDayPanel(container, dateStr) {
   const panel = container.querySelector("#cal-day-panel");
+  const modalSlot = container.querySelector("#cal-log-modal-slot");
   const data = getData();
   const plan = data.plans[dateStr] || { title: "", exerciseIds: [] };
+  let exerciseIds = [...(plan.exerciseIds || [])];
+  let selectedGroups = [];
 
   panel.innerHTML = `
     <div class="day-panel">
       <div class="day-panel-title">${dateStr}</div>
+
       <label class="field-label">Plan label</label>
       <input type="text" id="plan-title" class="input" placeholder="e.g. Push — Chest & Shoulders" value="${plan.title || ""}" />
-      <label class="field-label">Add exercise</label>
-      <select id="plan-ex-select" class="select">
-        <option value="">Choose an exercise…</option>
-        ${EXERCISES.map(e => `<option value="${e.id}">${e.name} (${SUBMUSCLE_LABELS[e.sub]})</option>`).join("")}
-      </select>
+
+      <label class="field-label">Browse by muscle group (pick one or more)</label>
+      <div class="group-chip-row" id="group-chip-row">
+        ${Object.entries(MUSCLE_GROUPS).map(([gid, g]) => `
+          <button class="group-chip" data-group="${gid}">${g.label}</button>
+        `).join("")}
+      </div>
+
+      <div id="browse-sections"></div>
+
+      <label class="field-label">Planned exercises</label>
       <div id="plan-ex-list" class="plan-ex-list"></div>
+
       <div class="day-panel-actions">
         <button class="btn btn-ghost" id="clear-plan">Clear day</button>
         <button class="btn btn-primary" id="save-plan">Save plan</button>
       </div>
+
+      <hr class="day-panel-divider" />
+
+      <div class="day-log-section">
+        <div class="day-panel-subtitle">Log what you actually did on ${dateStr}</div>
+        <div id="day-log-list"></div>
+        <div id="day-existing-logs"></div>
+      </div>
     </div>
   `;
 
-  let exerciseIds = [...(plan.exerciseIds || [])];
-
-  function renderList() {
+  function renderPlanList() {
     const list = panel.querySelector("#plan-ex-list");
     list.innerHTML = exerciseIds.map(id => `
-      <div class="plan-ex-chip" data-id="${id}">${exerciseName(id)} <span class="remove-x">×</span></div>
-    `).join("") || `<div class="empty-state-small">No exercises added yet.</div>`;
-    list.querySelectorAll(".plan-ex-chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        exerciseIds = exerciseIds.filter(id => id !== chip.dataset.id);
-        renderList();
+      <div class="plan-ex-chip" data-id="${id}">
+        <span class="plan-ex-name">${exerciseName(id)}</span>
+        <span class="remove-x" data-action="remove" data-id="${id}" title="Remove from plan">×</span>
+      </div>
+    `).join("") || `<div class="empty-state-small">No exercises added yet. Pick a muscle group above.</div>`;
+    list.querySelectorAll("[data-action='remove']").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        exerciseIds = exerciseIds.filter(id => id !== btn.dataset.id);
+        renderPlanList();
+        renderDayLogList();
       });
     });
   }
-  renderList();
 
-  panel.querySelector("#plan-ex-select").addEventListener("change", (e) => {
-    const val = e.target.value;
-    if (val && !exerciseIds.includes(val)) exerciseIds.push(val);
-    e.target.value = "";
-    renderList();
+  function renderBrowseSections() {
+    const el2 = panel.querySelector("#browse-sections");
+    if (selectedGroups.length === 0) {
+      el2.innerHTML = "";
+      return;
+    }
+    el2.innerHTML = selectedGroups.map(gid => {
+      const g = MUSCLE_GROUPS[gid];
+      return `
+        <div class="browse-group">
+          <div class="browse-group-title">${g.label}</div>
+          ${g.subs.map(sub => `
+            <div class="browse-sub-row">
+              <div class="browse-sub-label">${SUBMUSCLE_LABELS[sub]}</div>
+              <div class="browse-sub-exercises">
+                ${(EXERCISES_BY_SUB[sub] || []).map(e => `
+                  <button class="ex-chip-add ${exerciseIds.includes(e.id) ? "added" : ""}" data-id="${e.id}">
+                    ${e.name} <span class="ex-chip-equip">${EQUIP_LABELS[e.equip]}</span>
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }).join("");
+
+    el2.querySelectorAll(".ex-chip-add").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        if (exerciseIds.includes(id)) {
+          exerciseIds = exerciseIds.filter(x => x !== id);
+        } else {
+          exerciseIds.push(id);
+        }
+        renderBrowseSections();
+        renderPlanList();
+        renderDayLogList();
+      });
+    });
+  }
+
+  function renderDayLogList() {
+    const el3 = panel.querySelector("#day-log-list");
+    if (exerciseIds.length === 0) {
+      el3.innerHTML = `<div class="empty-state-small">Add exercises to the plan above, then log them here once you've done them.</div>`;
+      return;
+    }
+    el3.innerHTML = exerciseIds.map(id => `
+      <div class="day-log-row">
+        <span class="day-log-name">${exerciseName(id)}</span>
+        <button class="btn btn-small log-btn" data-id="${id}">Log</button>
+      </div>
+    `).join("");
+    el3.querySelectorAll(".log-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        renderLogForm(modalSlot, btn.dataset.id, () => {
+          modalSlot.innerHTML = "";
+          renderExistingLogs();
+          renderCalendar(container);
+        }, dateStr);
+      });
+    });
+  }
+
+  function renderExistingLogs() {
+    const el4 = panel.querySelector("#day-existing-logs");
+    const logsToday = getData().logs.filter(l => l.date === dateStr);
+    if (logsToday.length === 0) {
+      el4.innerHTML = "";
+      return;
+    }
+    el4.innerHTML = `<div class="field-label" style="margin-top:14px;">Already logged today</div>` + logsToday.map(l => `
+      <div class="history-row">
+        <div class="history-main">
+          <div class="history-exercise">${exerciseName(l.exerciseId)}</div>
+          <div class="history-sets">${l.sets.map(s => `<span class="set-chip">${s.weight}kg × ${s.reps}</span>`).join(" ")}</div>
+        </div>
+        <button class="btn btn-icon delete-log" data-id="${l.id}" title="Delete">×</button>
+      </div>
+    `).join("");
+    el4.querySelectorAll(".delete-log").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!confirm("Delete this log entry?")) return;
+        save(d => { d.logs = d.logs.filter(l => l.id !== btn.dataset.id); });
+        renderExistingLogs();
+        renderCalendar(container);
+      });
+    });
+  }
+
+  panel.querySelectorAll(".group-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const gid = chip.dataset.group;
+      if (selectedGroups.includes(gid)) {
+        selectedGroups = selectedGroups.filter(x => x !== gid);
+        chip.classList.remove("active");
+      } else {
+        selectedGroups.push(gid);
+        chip.classList.add("active");
+      }
+      renderBrowseSections();
+    });
   });
 
   panel.querySelector("#save-plan").addEventListener("click", () => {
@@ -117,4 +237,9 @@ function renderDayPanel(container, dateStr) {
     save(data => { delete data.plans[dateStr]; });
     renderCalendar(container);
   });
+
+  renderPlanList();
+  renderBrowseSections();
+  renderDayLogList();
+  renderExistingLogs();
 }
