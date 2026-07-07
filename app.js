@@ -6,6 +6,7 @@ const VIEWS = [
   { id: "history", label: "History", icon: "≣" },
   { id: "calendar", label: "Calendar", icon: "▦" },
   { id: "nutrition", label: "Nutrition", icon: "◐" },
+  { id: "library", label: "Library", icon: "◱" },
   { id: "settings", label: "Settings", icon: "⚙" },
 ];
 
@@ -58,6 +59,7 @@ function renderView() {
   else if (currentView === "history") renderHistoryView(panel);
   else if (currentView === "calendar") renderCalendarView(panel);
   else if (currentView === "nutrition") renderNutritionView(panel);
+  else if (currentView === "library") renderLibraryView(panel);
   else if (currentView === "settings") renderSettingsView(panel);
 }
 
