@@ -379,24 +379,55 @@ button, input, select, textarea { font-family: inherit; }
 .day-log-name { font-size: 13px; }
 
 /* ---------- NUTRITION VIEW ---------- */
-.nutrition-add-row { display: flex; gap: 10px; align-items: flex-start; }
-.nutrition-add-row .select { flex: 2; }
-.nutrition-list { display: flex; flex-direction: column; gap: 8px; margin: 18px 0; }
+.nutrition-cat-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-tab {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-bright);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cat-tab:hover { border-color: var(--accent-2); color: var(--accent-2); }
+.cat-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.food-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+.food-table th {
+  text-align: left; font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--line); padding: 8px 6px;
+}
+.food-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.food-note { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.input-tiny { width: 70px; display: inline-block; margin-bottom: 0; padding: 6px 8px; }
+.unit-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-left: 6px; }
+
+.nutrition-list-header {
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); margin: 22px 0 10px;
+}
+.nutrition-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
 .nutrition-row {
   display: flex; align-items: center; gap: 14px;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px;
 }
 .nutrition-row-name { flex: 1; }
 .muted { color: var(--muted); font-size: 12px; }
-.nutrition-row-macros { display: flex; gap: 12px; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.nutrition-row-macros { display: flex; gap: 12px; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
 .nutrition-totals {
   background: var(--panel-2); border: 1px solid var(--accent-2); border-radius: var(--radius);
   padding: 16px; margin-bottom: 16px;
 }
-.totals-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--accent-2); margin-bottom: 10px; letter-spacing: 0.06em; }
+.totals-section-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--accent-2); margin-bottom: 10px; letter-spacing: 0.06em; }
 .totals-grid { display: flex; gap: 24px; flex-wrap: wrap; }
 .totals-value { font-family: var(--font-display); font-size: 20px; }
 .totals-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.micro-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.micro-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.micro-table td.micro-value { text-align: right; font-family: var(--font-mono); color: var(--text); }
 
 /* ---------- SETTINGS VIEW ---------- */
 .settings-card {
@@ -408,6 +439,7 @@ button, input, select, textarea { font-family: inherit; }
 .settings-status { margin-top: 14px; font-family: var(--font-mono); font-size: 12px; }
 .status-ok { color: var(--good); }
 .status-error { color: var(--accent); }
+
 
 /* ---------- RESPONSIVE ---------- */
 @media (max-width: 980px) {
