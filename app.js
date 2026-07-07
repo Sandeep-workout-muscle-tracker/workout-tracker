@@ -78,18 +78,21 @@ function renderDashboardView(panel) {
 }
 
 // ---------------- TRAIN VIEW ----------------
+let selectedMainCategory = "chest";  // default landing category
+
 function renderTrainView(panel) {
   panel.innerHTML = `
     <div class="view-header">
       <h1>Train</h1>
-      <p class="view-sub">Click a muscle on the schematic or filter directly, then log your sets.</p>
+      <p class="view-sub">Pick a main muscle group, then drill into the sub-muscle you want to train.</p>
     </div>
     <div class="train-layout">
       <div class="map-panel" id="map-panel"></div>
       <div class="list-panel">
-        <div class="list-panel-header">
-          <div id="filter-slot"></div>
-          <input type="text" id="search-box" class="input" placeholder="Search exercises…" />
+        <div id="main-cat-tabs" class="main-cat-tabs"></div>
+        <div id="sub-cat-chips" class="sub-cat-chips"></div>
+        <div class="train-search-row">
+          <input type="text" id="search-box" class="input" placeholder="Search within category…" />
         </div>
         <div id="exercise-list" class="exercise-list"></div>
       </div>
@@ -97,14 +100,68 @@ function renderTrainView(panel) {
   `;
 
   const mapPanel = el("map-panel");
-  const filterSlot = el("filter-slot");
   const listContainer = el("exercise-list");
   const searchBox = el("search-box");
   const modalSlot = el("global-log-modal-slot");
+  let mapWidget = null;
+
+  function renderMainCatTabs() {
+    const tabsEl = el("main-cat-tabs");
+    tabsEl.innerHTML = Object.entries(MUSCLE_GROUPS).map(([gid, g]) => `
+      <button class="main-cat-tab ${gid === selectedMainCategory ? "active" : ""}" data-cat="${gid}">
+        ${g.label}
+      </button>
+    `).join("");
+    tabsEl.querySelectorAll(".main-cat-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedMainCategory = btn.dataset.cat;
+        selectedSubFilter = null;  // reset sub-filter when switching main category
+        searchBox.value = "";
+        renderMainCatTabs();
+        renderSubCatChips();
+        refreshList();
+        if (mapWidget) mapWidget.setSelected(null);
+      });
+    });
+  }
+
+  function renderSubCatChips() {
+    const chipsEl = el("sub-cat-chips");
+    const group = MUSCLE_GROUPS[selectedMainCategory];
+    if (!group) { chipsEl.innerHTML = ""; return; }
+    chipsEl.innerHTML = `
+      <button class="sub-cat-chip ${!selectedSubFilter ? "active" : ""}" data-sub="">
+        All ${group.label}
+      </button>
+      ${group.subs.map(sub => `
+        <button class="sub-cat-chip ${sub === selectedSubFilter ? "active" : ""}" data-sub="${sub}">
+          ${SUBMUSCLE_LABELS[sub]}
+        </button>
+      `).join("")}
+    `;
+    chipsEl.querySelectorAll(".sub-cat-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedSubFilter = btn.dataset.sub || null;
+        renderSubCatChips();
+        refreshList();
+        if (mapWidget) mapWidget.setSelected(selectedSubFilter);
+      });
+    });
+  }
+
+  function currentExerciseSet() {
+    if (selectedSubFilter) {
+      return EXERCISES_BY_SUB[selectedSubFilter] || [];
+    }
+    const group = MUSCLE_GROUPS[selectedMainCategory];
+    if (!group) return [];
+    // All exercises whose primary sub belongs to this category
+    return EXERCISES.filter(e => group.subs.includes(e.sub));
+  }
 
   function refreshList() {
     const term = searchBox.value.trim().toLowerCase();
-    let list = selectedSubFilter ? (EXERCISES_BY_SUB[selectedSubFilter] || []) : EXERCISES;
+    let list = currentExerciseSet();
     if (term) list = list.filter(e => e.name.toLowerCase().includes(term));
     renderExerciseListFrom(listContainer, list, (exId) => {
       renderLogForm(modalSlot, exId, () => { modalSlot.innerHTML = ""; });
@@ -112,7 +169,30 @@ function renderTrainView(panel) {
   }
 
   function renderExerciseListFrom(container, list, onLog) {
-    container.innerHTML = list.length ? list.map(e => `
+    // Group by sub-muscle for a cleaner display when showing "All X"
+    if (!selectedSubFilter) {
+      const group = MUSCLE_GROUPS[selectedMainCategory];
+      const bySubMuscle = {};
+      group.subs.forEach(sub => { bySubMuscle[sub] = []; });
+      list.forEach(e => { if (bySubMuscle[e.sub]) bySubMuscle[e.sub].push(e); });
+
+      container.innerHTML = Object.entries(bySubMuscle)
+        .filter(([, exs]) => exs.length > 0)
+        .map(([sub, exs]) => `
+          <div class="ex-sub-section">
+            <div class="ex-sub-section-title">${SUBMUSCLE_LABELS[sub]} <span class="ex-sub-count">${exs.length}</span></div>
+            ${exs.map(exerciseCardHtml).join("")}
+          </div>
+        `).join("") || `<div class="empty-state">No exercises match. Try a different search term.</div>`;
+    } else {
+      container.innerHTML = list.length ? list.map(exerciseCardHtml).join("")
+        : `<div class="empty-state">No exercises match. Try a different search term.</div>`;
+    }
+    container.querySelectorAll(".log-btn").forEach(btn => btn.addEventListener("click", () => onLog(btn.dataset.id)));
+  }
+
+  function exerciseCardHtml(e) {
+    return `
       <div class="ex-card" data-id="${e.id}">
         <div class="ex-card-main">
           <div class="ex-name">${e.name}</div>
@@ -125,24 +205,29 @@ function renderTrainView(panel) {
         </div>
         <button class="btn btn-primary btn-small log-btn" data-id="${e.id}">Log</button>
       </div>
-    `).join("") : `<div class="empty-state">No exercises match. Try a different muscle or search term.</div>`;
-    container.querySelectorAll(".log-btn").forEach(btn => btn.addEventListener("click", () => onLog(btn.dataset.id)));
+    `;
   }
 
-  filterSlot.innerHTML = renderExercisePicker(selectedSubFilter);
-  filterSlot.querySelector("#sub-filter").addEventListener("change", (e) => {
-    selectedSubFilter = e.target.value || null;
-    mapWidget.setSelected(selectedSubFilter);
-    refreshList();
-  });
   searchBox.addEventListener("input", refreshList);
 
-  const mapWidget = initMuscleMap(mapPanel, (sub) => {
-    selectedSubFilter = sub;
-    filterSlot.querySelector("#sub-filter").value = sub;
-    refreshList();
+  // When user clicks a muscle on the schematic, auto-switch to its category + sub
+  mapWidget = initMuscleMap(mapPanel, (sub) => {
+    // Find which main category this sub belongs to
+    for (const [gid, g] of Object.entries(MUSCLE_GROUPS)) {
+      if (g.subs.includes(sub)) {
+        selectedMainCategory = gid;
+        selectedSubFilter = sub;
+        searchBox.value = "";
+        renderMainCatTabs();
+        renderSubCatChips();
+        refreshList();
+        return;
+      }
+    }
   });
 
+  renderMainCatTabs();
+  renderSubCatChips();
   refreshList();
 }
 
