@@ -8,7 +8,12 @@ const LS_KEYS = {
   cache: "wt_data_cache_v1",
 };
 
-const DEFAULT_DATA = () => ({ logs: [], plans: {}, meta: { version: 1 } });
+const DEFAULT_DATA = () => ({
+  logs: [],
+  plans: {},
+  library: { exercises: {}, foods: {} },
+  meta: { version: 2 }
+});
 
 function getSettings() {
   try {
