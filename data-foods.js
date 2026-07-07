@@ -15,7 +15,7 @@ function food(id, name, cat, macros, micros, extra) {
   }, extra || {});
 }
 
-const FOODS = [
+const SEED_FOODS = [
   // ============ PROTEIN (meat / fish / eggs / whey) ============
   food("chicken_breast", "Chicken Breast (cooked)", "protein",
     [165,31,0,0,0,3.6], [65,256,74,15,0.9, 29,0.9, 6,0,0.1,0.3,0.3, 0.6,0.3,4]),
@@ -304,3 +304,6 @@ const FOOD_CATS = {
 };
 
 const FOOD_CAT_ORDER = ["protein", "legume", "grain", "vegetable", "fruit", "nuts", "seed", "dairy", "oil_fat"];
+
+// Live getter that respects user library overrides. See library.js.
+Object.defineProperty(globalThis, "FOODS", { get() { return getFoods(); } });
