@@ -11,8 +11,7 @@ function todayStr() {
 }
 
 function exerciseName(id) {
-  const e = EXERCISES.find(x => x.id === id);
-  return e ? e.name : id;
+  return exerciseNameSafe(id);
 }
 
 function renderExercisePicker(selectedSub) {
@@ -140,11 +139,13 @@ function renderHistory(container) {
     container.innerHTML = `<div class="empty-state">No workouts logged yet. Pick an exercise from Train and hit Log.</div>`;
     return;
   }
-  container.innerHTML = logs.map(l => `
-    <div class="history-row" data-id="${l.id}">
+  container.innerHTML = logs.map(l => {
+    const removed = isExerciseDeleted(l.exerciseId);
+    return `
+    <div class="history-row ${removed ? "row-removed" : ""}" data-id="${l.id}">
       <div class="history-date">${l.date}</div>
       <div class="history-main">
-        <div class="history-exercise">${exerciseName(l.exerciseId)}</div>
+        <div class="history-exercise">${exerciseName(l.exerciseId)}${removed ? ` <span class="tag tag-removed">removed</span>` : ""}</div>
         <div class="history-sets">${l.sets.map((s, i) => `<span class="set-chip">${i + 1}. ${s.weight}kg × ${s.reps}</span>`).join(" ")}</div>
         ${l.note ? `<div class="history-note">${l.note}</div>` : ""}
       </div>
@@ -153,7 +154,7 @@ function renderHistory(container) {
         <button class="btn btn-icon delete-log" data-id="${l.id}" title="Delete">×</button>
       </div>
     </div>
-  `).join("");
+  `;}).join("");
 
   container.querySelectorAll(".delete-log").forEach(btn => {
     btn.addEventListener("click", () => {
