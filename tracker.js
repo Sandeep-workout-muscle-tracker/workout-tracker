@@ -1,4 +1,5 @@
-// Workout logging, history and simple progress charting.
+// Workout logging, history, progress. The log form is now an inline right-drawer
+// (bottom sheet on mobile) that supports both creating and editing entries.
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -29,70 +30,94 @@ function renderExercisePicker(selectedSub) {
   </select>`;
 }
 
-function renderExerciseList(container, filterSub, onLog) {
-  const list = filterSub ? (EXERCISES_BY_SUB[filterSub] || []) : EXERCISES;
-  container.innerHTML = list.map(e => `
-    <div class="ex-card" data-id="${e.id}">
-      <div class="ex-card-main">
-        <div class="ex-name">${e.name}</div>
-        <div class="ex-meta">
-          <span class="tag tag-equip">${EQUIP_LABELS[e.equip]}</span>
-          <span class="tag tag-sub">${SUBMUSCLE_LABELS[e.sub]}</span>
-          ${e.secondary.map(s => `<span class="tag tag-secondary">+${SUBMUSCLE_LABELS[s]}</span>`).join("")}
-        </div>
-        <div class="ex-note">${e.note}</div>
-      </div>
-      <button class="btn btn-small log-btn" data-id="${e.id}">Log</button>
-    </div>
-  `).join("") || `<div class="empty-state">No exercises found for this muscle yet.</div>`;
-
-  container.querySelectorAll(".log-btn").forEach(btn => {
-    btn.addEventListener("click", () => onLog(btn.dataset.id));
-  });
-}
-
-function renderLogForm(container, exerciseId, onSaved, presetDate) {
+/**
+ * Render the log drawer.
+ * @param {HTMLElement} container - slot element to inject drawer into
+ * @param {string} exerciseId
+ * @param {Function} onSaved - called after save/update
+ * @param {string} presetDate - default date (YYYY-MM-DD)
+ * @param {string|null} editLogId - if provided, drawer opens in edit mode for that log
+ */
+function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
+  const isEdit = !!editLogId;
+  const existing = isEdit ? getData().logs.find(l => l.id === editLogId) : null;
   const name = exerciseName(exerciseId);
-  const dateValue = presetDate || todayStr();
+  const dateValue = existing?.date || presetDate || todayStr();
+  const initialSets = existing?.sets?.length ? existing.sets : [{ weight: "", reps: "" }, { weight: "", reps: "" }];
+  const initialNote = existing?.note || "";
+  const initialWarmup = existing?.warmup || "";
+  const initialCooldown = existing?.cooldown || "";
+
   container.innerHTML = `
-    <div class="log-form-backdrop">
-      <div class="log-form">
-        <div class="log-form-title">Log — ${name}</div>
-        <label class="field-label">Date</label>
-        <input type="date" id="log-date" value="${dateValue}" class="input" />
-        <label class="field-label">Sets</label>
-        <div id="sets-rows"></div>
-        <button class="btn btn-ghost" id="add-set-row">+ Add set</button>
-        <label class="field-label">Note</label>
-        <textarea id="log-note" class="input" rows="2" placeholder="Optional notes"></textarea>
-        <div class="log-form-actions">
-          <button class="btn btn-ghost" id="cancel-log">Cancel</button>
-          <button class="btn btn-primary" id="save-log">Save entry</button>
+    <div class="log-drawer-backdrop" id="log-backdrop"></div>
+    <div class="log-drawer" role="dialog" aria-label="Log entry">
+      <div class="log-drawer-header">
+        <div>
+          <div class="log-drawer-title">${isEdit ? "Edit" : "Log"} — ${name}</div>
+          <div class="log-drawer-sub">${isEdit ? "Update this entry" : "Record your sets"}</div>
         </div>
+        <button class="btn-icon" id="cancel-log" title="Close">×</button>
+      </div>
+
+      <label class="field-label">Date</label>
+      <input type="date" id="log-date" value="${dateValue}" class="input" />
+
+      <label class="field-label">Warmup (pre-workout)</label>
+      <textarea id="log-warmup" class="input" rows="2" placeholder="e.g. Arm circles 2 min, light empty bar sets">${initialWarmup}</textarea>
+
+      <label class="field-label">Sets</label>
+      <div id="sets-rows"></div>
+      <button class="btn btn-ghost btn-small" id="add-set-row" style="margin-top: 4px;">+ Add set</button>
+
+      <label class="field-label" style="margin-top: 16px;">Cooldown (post-workout)</label>
+      <textarea id="log-cooldown" class="input" rows="2" placeholder="e.g. Chest doorway stretch 30s each side">${initialCooldown}</textarea>
+
+      <label class="field-label">Note</label>
+      <textarea id="log-note" class="input" rows="2" placeholder="Optional notes">${initialNote}</textarea>
+
+      <div class="log-drawer-actions">
+        <button class="btn btn-ghost" id="cancel-log-2">Cancel</button>
+        <button class="btn btn-primary" id="save-log">${isEdit ? "Update" : "Save entry"}</button>
       </div>
     </div>
   `;
 
   const setsRows = container.querySelector("#sets-rows");
+  function renumberSerials() {
+    setsRows.querySelectorAll(".set-row").forEach((row, idx) => {
+      row.querySelector(".set-serial").textContent = idx + 1;
+    });
+  }
   function addRow(weight, reps) {
     const row = document.createElement("div");
     row.className = "set-row";
     row.innerHTML = `
+      <span class="set-serial"></span>
       <input type="number" step="0.5" class="input input-small set-weight" placeholder="Weight (kg)" value="${weight || ""}" />
       <span class="set-x">×</span>
       <input type="number" class="input input-small set-reps" placeholder="Reps" value="${reps || ""}" />
-      <button class="btn btn-icon remove-set" title="Remove">×</button>
+      <button class="btn btn-icon remove-set" title="Remove set">×</button>
     `;
-    row.querySelector(".remove-set").addEventListener("click", () => row.remove());
+    row.querySelector(".remove-set").addEventListener("click", () => {
+      row.remove();
+      renumberSerials();
+    });
     setsRows.appendChild(row);
+    renumberSerials();
   }
-  addRow(); addRow();
+  initialSets.forEach(s => addRow(s.weight, s.reps));
 
+  function close() { container.innerHTML = ""; }
   container.querySelector("#add-set-row").addEventListener("click", () => addRow());
-  container.querySelector("#cancel-log").addEventListener("click", () => { container.innerHTML = ""; });
+  container.querySelector("#cancel-log").addEventListener("click", close);
+  container.querySelector("#cancel-log-2").addEventListener("click", close);
+  container.querySelector("#log-backdrop").addEventListener("click", close);
+
   container.querySelector("#save-log").addEventListener("click", () => {
     const date = container.querySelector("#log-date").value || todayStr();
     const note = container.querySelector("#log-note").value.trim();
+    const warmup = container.querySelector("#log-warmup").value.trim();
+    const cooldown = container.querySelector("#log-cooldown").value.trim();
     const sets = Array.from(setsRows.querySelectorAll(".set-row")).map(row => ({
       weight: parseFloat(row.querySelector(".set-weight").value) || 0,
       reps: parseInt(row.querySelector(".set-reps").value) || 0,
@@ -100,10 +125,19 @@ function renderLogForm(container, exerciseId, onSaved, presetDate) {
 
     if (sets.length === 0) { alert("Add at least one set with a weight or rep count."); return; }
 
-    save(data => {
-      data.logs.push({ id: uid(), date, exerciseId, sets, note });
-    });
-    container.innerHTML = "";
+    if (isEdit) {
+      save(data => {
+        const idx = data.logs.findIndex(l => l.id === editLogId);
+        if (idx !== -1) {
+          data.logs[idx] = { ...data.logs[idx], date, exerciseId, sets, note, warmup, cooldown };
+        }
+      });
+    } else {
+      save(data => {
+        data.logs.push({ id: uid(), date, exerciseId, sets, note, warmup, cooldown });
+      });
+    }
+    close();
     onSaved();
   });
 }
@@ -112,7 +146,7 @@ function renderHistory(container) {
   const data = getData();
   const logs = [...data.logs].sort((a, b) => b.date.localeCompare(a.date));
   if (logs.length === 0) {
-    container.innerHTML = `<div class="empty-state">No workouts logged yet. Pick an exercise above and hit Log.</div>`;
+    container.innerHTML = `<div class="empty-state">No workouts logged yet. Pick an exercise from Train and hit Log.</div>`;
     return;
   }
   container.innerHTML = logs.map(l => `
@@ -120,10 +154,13 @@ function renderHistory(container) {
       <div class="history-date">${l.date}</div>
       <div class="history-main">
         <div class="history-exercise">${exerciseName(l.exerciseId)}</div>
-        <div class="history-sets">${l.sets.map(s => `<span class="set-chip">${s.weight}kg × ${s.reps}</span>`).join(" ")}</div>
+        <div class="history-sets">${l.sets.map((s, i) => `<span class="set-chip">${i + 1}. ${s.weight}kg × ${s.reps}</span>`).join(" ")}</div>
         ${l.note ? `<div class="history-note">${l.note}</div>` : ""}
       </div>
-      <button class="btn btn-icon delete-log" data-id="${l.id}" title="Delete">×</button>
+      <div class="history-actions">
+        <button class="btn btn-icon edit-log" data-id="${l.id}" data-ex="${l.exerciseId}" title="Edit">✎</button>
+        <button class="btn btn-icon delete-log" data-id="${l.id}" title="Delete">×</button>
+      </div>
     </div>
   `).join("");
 
@@ -134,8 +171,23 @@ function renderHistory(container) {
       renderHistory(container);
     });
   });
+
+  container.querySelectorAll(".edit-log").forEach(btn => {
+    btn.addEventListener("click", () => {
+      let modalSlot = document.getElementById("global-log-modal-slot");
+      if (!modalSlot) {
+        modalSlot = document.createElement("div");
+        modalSlot.id = "global-log-modal-slot";
+        document.body.appendChild(modalSlot);
+      }
+      renderLogForm(modalSlot, btn.dataset.ex, () => { renderHistory(container); }, null, btn.dataset.id);
+    });
+  });
 }
 
+/**
+ * Simple line chart: top set weight over time for one exercise.
+ */
 function renderProgressChart(container, exerciseId) {
   const data = getData();
   const logs = data.logs.filter(l => l.exerciseId === exerciseId).sort((a, b) => a.date.localeCompare(b.date));
@@ -144,16 +196,39 @@ function renderProgressChart(container, exerciseId) {
     return;
   }
   const points = logs.map(l => Math.max(...l.sets.map(s => s.weight)));
+  const dates = logs.map(l => l.date.slice(5));
   const max = Math.max(...points), min = Math.min(...points);
-  const w = 560, h = 160, pad = 24;
-  const stepX = (w - pad * 2) / (points.length - 1);
-  const scaleY = (v) => h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2);
-  const coords = points.map((p, i) => `${pad + i * stepX},${scaleY(p)}`).join(" ");
+  const w = 560, h = 200, padL = 34, padR = 16, padT = 16, padB = 30;
+  const stepX = (w - padL - padR) / Math.max(1, points.length - 1);
+  const scaleY = (v) => h - padB - ((v - min) / (max - min || 1)) * (h - padT - padB);
+  const coords = points.map((p, i) => `${padL + i * stepX},${scaleY(p)}`).join(" ");
+  const areaPath = `M${padL},${h - padB} L${coords.replace(/ /g, " L")} L${padL + (points.length - 1) * stepX},${h - padB} Z`;
+  const yTicks = 4;
   container.innerHTML = `
-    <div class="chart-title">Top set weight — ${exerciseName(exerciseId)}</div>
+    <div class="chart-card-header">
+      <div>
+        <div class="chart-card-title">Top set weight</div>
+        <div class="chart-card-sub">${exerciseName(exerciseId)}</div>
+      </div>
+      <div class="chart-card-sub">${min}kg → ${max}kg</div>
+    </div>
     <svg viewBox="0 0 ${w} ${h}" class="chart-svg">
-      <polyline points="${coords}" class="chart-line" />
-      ${points.map((p, i) => `<circle cx="${pad + i * stepX}" cy="${scaleY(p)}" r="4" class="chart-dot"></circle>`).join("")}
+      <defs>
+        <linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#FF6B3D" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#FF6B3D" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      ${Array.from({ length: yTicks + 1 }).map((_, i) => {
+        const y = padT + (i / yTicks) * (h - padT - padB);
+        const v = max - (i / yTicks) * (max - min);
+        return `<line x1="${padL}" x2="${w - padR}" y1="${y}" y2="${y}" class="chart-grid"/>
+                <text x="4" y="${y + 3}" class="chart-axis-label">${v.toFixed(0)}</text>`;
+      }).join("")}
+      <path d="${areaPath}" class="chart-area"/>
+      <polyline points="${coords}" class="chart-line"/>
+      ${points.map((p, i) => `<circle cx="${padL + i * stepX}" cy="${scaleY(p)}" r="4" class="chart-dot"></circle>`).join("")}
+      ${points.map((p, i) => i % Math.ceil(points.length / 8) === 0 ? `<text x="${padL + i * stepX}" y="${h - 8}" text-anchor="middle" class="chart-axis-label">${dates[i]}</text>` : "").join("")}
     </svg>
   `;
 }
