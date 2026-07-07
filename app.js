@@ -1,6 +1,7 @@
-// App shell: left nav + view router, ties muscle map, tracker, calendar, nutrition, settings together.
+// App shell: left nav + view router. Dashboard is the new default landing.
 
 const VIEWS = [
+  { id: "dashboard", label: "Dashboard", icon: "◇" },
   { id: "train", label: "Train", icon: "◈" },
   { id: "history", label: "History", icon: "≣" },
   { id: "calendar", label: "Calendar", icon: "▦" },
@@ -8,7 +9,7 @@ const VIEWS = [
   { id: "settings", label: "Settings", icon: "⚙" },
 ];
 
-let currentView = "train";
+let currentView = "dashboard";
 let selectedSubFilter = null;
 let lastSyncStatus = "local-only";
 let lastSyncDetail = null;
@@ -36,6 +37,7 @@ function renderShell() {
       </nav>
       <main class="main-panel" id="main-panel"></main>
     </div>
+    <div id="global-log-modal-slot"></div>
   `;
 
   document.querySelectorAll(".nav-item").forEach(btn => {
@@ -51,11 +53,24 @@ function renderShell() {
 
 function renderView() {
   const panel = el("main-panel");
-  if (currentView === "train") renderTrainView(panel);
+  if (currentView === "dashboard") renderDashboardView(panel);
+  else if (currentView === "train") renderTrainView(panel);
   else if (currentView === "history") renderHistoryView(panel);
   else if (currentView === "calendar") renderCalendarView(panel);
   else if (currentView === "nutrition") renderNutritionView(panel);
   else if (currentView === "settings") renderSettingsView(panel);
+}
+
+// ---------------- DASHBOARD VIEW ----------------
+function renderDashboardView(panel) {
+  panel.innerHTML = `
+    <div class="view-header">
+      <h1>Dashboard</h1>
+      <p class="view-sub">At-a-glance overview of your training volume, exercise trends and muscle-group balance.</p>
+    </div>
+    <div id="dashboard-root"></div>
+  `;
+  renderDashboard(el("dashboard-root"));
 }
 
 // ---------------- TRAIN VIEW ----------------
@@ -63,7 +78,7 @@ function renderTrainView(panel) {
   panel.innerHTML = `
     <div class="view-header">
       <h1>Train</h1>
-      <p class="view-sub">Click a panel on the schematic, or filter the list directly, then log your sets.</p>
+      <p class="view-sub">Click a muscle on the schematic or filter directly, then log your sets.</p>
     </div>
     <div class="train-layout">
       <div class="map-panel" id="map-panel"></div>
@@ -75,28 +90,25 @@ function renderTrainView(panel) {
         <div id="exercise-list" class="exercise-list"></div>
       </div>
     </div>
-    <div id="log-modal-slot"></div>
   `;
 
   const mapPanel = el("map-panel");
   const filterSlot = el("filter-slot");
   const listContainer = el("exercise-list");
   const searchBox = el("search-box");
-  const modalSlot = el("log-modal-slot");
+  const modalSlot = el("global-log-modal-slot");
 
   function refreshList() {
     const term = searchBox.value.trim().toLowerCase();
     let list = selectedSubFilter ? (EXERCISES_BY_SUB[selectedSubFilter] || []) : EXERCISES;
     if (term) list = list.filter(e => e.name.toLowerCase().includes(term));
     renderExerciseListFrom(listContainer, list, (exId) => {
-      renderLogForm(modalSlot, exId, () => {
-        modalSlot.innerHTML = "";
-      });
+      renderLogForm(modalSlot, exId, () => { modalSlot.innerHTML = ""; });
     });
   }
 
   function renderExerciseListFrom(container, list, onLog) {
-    container.innerHTML = list.map(e => `
+    container.innerHTML = list.length ? list.map(e => `
       <div class="ex-card" data-id="${e.id}">
         <div class="ex-card-main">
           <div class="ex-name">${e.name}</div>
@@ -107,9 +119,9 @@ function renderTrainView(panel) {
           </div>
           <div class="ex-note">${e.note}</div>
         </div>
-        <button class="btn btn-small log-btn" data-id="${e.id}">Log</button>
+        <button class="btn btn-primary btn-small log-btn" data-id="${e.id}">Log</button>
       </div>
-    `).join("") || `<div class="empty-state">No exercises match. Try a different muscle or search term.</div>`;
+    `).join("") : `<div class="empty-state">No exercises match. Try a different muscle or search term.</div>`;
     container.querySelectorAll(".log-btn").forEach(btn => btn.addEventListener("click", () => onLog(btn.dataset.id)));
   }
 
@@ -135,16 +147,16 @@ function renderHistoryView(panel) {
   panel.innerHTML = `
     <div class="view-header">
       <h1>History &amp; Progress</h1>
-      <p class="view-sub">Everything you've logged, plus a trend line for any exercise.</p>
+      <p class="view-sub">Everything you've logged, plus a trend line for any exercise. Click ✎ to edit, × to delete.</p>
     </div>
-    <div class="history-layout">
-      <div class="progress-panel">
+    <div class="history-layout" style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; align-items: start;">
+      <div class="card-elev">
         <label class="field-label">Show progress for</label>
         <select id="progress-ex-select" class="select">
           <option value="">Choose an exercise…</option>
           ${EXERCISES.map(e => `<option value="${e.id}">${e.name}</option>`).join("")}
         </select>
-        <div id="progress-chart" class="progress-chart"></div>
+        <div id="progress-chart" class="chart-card" style="border: none; padding: 0;"></div>
       </div>
       <div class="history-panel">
         <div id="history-list"></div>
@@ -163,7 +175,7 @@ function renderCalendarView(panel) {
   panel.innerHTML = `
     <div class="view-header">
       <h1>Calendar</h1>
-      <p class="view-sub">Plan workouts ahead of time. Days with a logged workout get a marker automatically.</p>
+      <p class="view-sub">Plan ahead, log what you did, track workout duration. Everything auto-saves.</p>
     </div>
     <div id="calendar-root"></div>
   `;
@@ -175,7 +187,7 @@ function renderNutritionView(panel) {
   panel.innerHTML = `
     <div class="view-header">
       <h1>Nutrition Calculator</h1>
-      <p class="view-sub">Add foods and veggies to see protein, carbs, fiber and fat add up.</p>
+      <p class="view-sub">Browse foods by category, add by grams or count, see macros and full micronutrients.</p>
     </div>
     <div id="nutrition-root"></div>
   `;
@@ -197,7 +209,7 @@ function renderSettingsView(panel) {
         and paste the details below. The token is stored only in this browser's local storage.
       </div>
       <label class="field-label">GitHub username / org</label>
-      <input type="text" id="set-owner" class="input" value="${s.owner || ""}" placeholder="e.g. Sandeep-expenses-tracker" />
+      <input type="text" id="set-owner" class="input" value="${s.owner || ""}" placeholder="e.g. Sandeep-workout-muscle-tracker" />
       <label class="field-label">Repository name</label>
       <input type="text" id="set-repo" class="input" value="${s.repo || ""}" placeholder="e.g. workout-data" />
       <label class="field-label">Branch</label>
