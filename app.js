@@ -70,6 +70,10 @@ function renderDashboardView(panel) {
     </div>
     <div id="dashboard-root"></div>
   `;
+  if (typeof renderDashboard !== "function") {
+    el("dashboard-root").innerHTML = `<div class="empty-state">Dashboard module missing. Please make sure <code>dashboard.js</code> is present in your repo and referenced in <code>index.html</code>.</div>`;
+    return;
+  }
   renderDashboard(el("dashboard-root"));
 }
 
