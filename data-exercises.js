@@ -28,7 +28,7 @@ function ex(id, name, sub, equip, note, secondary) {
   return { id, name, sub, equip, note, secondary: secondary || [] };
 }
 
-const EXERCISES = [
+const SEED_EXERCISES = [
   // ---- CHEST: UPPER ----
   ex("inc_bb_press", "Incline Barbell Bench Press", "chest_upper", "barbell", "Bench set 30-45°. Bar to upper chest, press up and slightly back.", ["delts_front", "triceps"]),
   ex("inc_db_press", "Incline Dumbbell Press", "chest_upper", "dumbbell", "Incline bench, press dumbbells up and in until they nearly touch.", ["delts_front", "triceps"]),
@@ -223,9 +223,8 @@ const EXERCISES = [
   ex("landmine_rotation", "Landmine Rotation", "obliques", "barbell", "One end of a bar anchored, rotate it side to side at arm's length.", []),
 ];
 
-// Convenience lookup
-const EXERCISES_BY_SUB = {};
-EXERCISES.forEach(e => {
-  if (!EXERCISES_BY_SUB[e.sub]) EXERCISES_BY_SUB[e.sub] = [];
-  EXERCISES_BY_SUB[e.sub].push(e);
-});
+// Convenience lookup — populated dynamically via library.js so user overrides are respected.
+// See getExercises() / getExercisesBySub() in library.js. Also expose EXERCISES + EXERCISES_BY_SUB
+// as live getters for backwards compatibility with existing callers.
+Object.defineProperty(globalThis, "EXERCISES", { get() { return getExercises(); } });
+Object.defineProperty(globalThis, "EXERCISES_BY_SUB", { get() { return getExercisesBySub(); } });
