@@ -45,8 +45,6 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   const dateValue = existing?.date || presetDate || todayStr();
   const initialSets = existing?.sets?.length ? existing.sets : [{ weight: "", reps: "" }, { weight: "", reps: "" }];
   const initialNote = existing?.note || "";
-  const initialWarmup = existing?.warmup || "";
-  const initialCooldown = existing?.cooldown || "";
 
   container.innerHTML = `
     <div class="log-drawer-backdrop" id="log-backdrop"></div>
@@ -62,18 +60,12 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
       <label class="field-label">Date</label>
       <input type="date" id="log-date" value="${dateValue}" class="input" />
 
-      <label class="field-label">Warmup (pre-workout)</label>
-      <textarea id="log-warmup" class="input" rows="2" placeholder="e.g. Arm circles 2 min, light empty bar sets">${initialWarmup}</textarea>
-
       <label class="field-label">Sets</label>
       <div id="sets-rows"></div>
       <button class="btn btn-ghost btn-small" id="add-set-row" style="margin-top: 4px;">+ Add set</button>
 
-      <label class="field-label" style="margin-top: 16px;">Cooldown (post-workout)</label>
-      <textarea id="log-cooldown" class="input" rows="2" placeholder="e.g. Chest doorway stretch 30s each side">${initialCooldown}</textarea>
-
-      <label class="field-label">Note</label>
-      <textarea id="log-note" class="input" rows="2" placeholder="Optional notes">${initialNote}</textarea>
+      <label class="field-label" style="margin-top: 18px;">Notes</label>
+      <textarea id="log-note" class="input log-note-area" rows="4" placeholder="Optional notes — how you felt, form cues, tempo, anything worth remembering">${initialNote}</textarea>
 
       <div class="log-drawer-actions">
         <button class="btn btn-ghost" id="cancel-log-2">Cancel</button>
@@ -116,8 +108,6 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   container.querySelector("#save-log").addEventListener("click", () => {
     const date = container.querySelector("#log-date").value || todayStr();
     const note = container.querySelector("#log-note").value.trim();
-    const warmup = container.querySelector("#log-warmup").value.trim();
-    const cooldown = container.querySelector("#log-cooldown").value.trim();
     const sets = Array.from(setsRows.querySelectorAll(".set-row")).map(row => ({
       weight: parseFloat(row.querySelector(".set-weight").value) || 0,
       reps: parseInt(row.querySelector(".set-reps").value) || 0,
@@ -129,12 +119,13 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
       save(data => {
         const idx = data.logs.findIndex(l => l.id === editLogId);
         if (idx !== -1) {
-          data.logs[idx] = { ...data.logs[idx], date, exerciseId, sets, note, warmup, cooldown };
+          // preserve any existing warmup/cooldown fields that may already be there
+          data.logs[idx] = { ...data.logs[idx], date, exerciseId, sets, note };
         }
       });
     } else {
       save(data => {
-        data.logs.push({ id: uid(), date, exerciseId, sets, note, warmup, cooldown });
+        data.logs.push({ id: uid(), date, exerciseId, sets, note });
       });
     }
     close();
