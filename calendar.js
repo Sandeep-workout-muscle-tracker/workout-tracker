@@ -20,6 +20,42 @@ function renderCalendar(container) {
   const startDow = first.getDay();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const monthLabel = calCursor.toLocaleString("default", { month: "long", year: "numeric" });
+
+  container.innerHTML = `
+    <div class="cal-header">
+      <button class="btn btn-ghost" id="cal-prev">‹ Prev</button>
+      <div class="cal-month-label">${monthLabel}</div>
+      <button class="btn btn-ghost" id="cal-next">Next ›</button>
+    </div>
+    <div class="cal-legend">
+      <div class="cal-legend-item"><span class="cal-legend-dot" style="background: var(--good)"></span> Logged</div>
+      <div class="cal-legend-item"><span class="cal-legend-dot" style="background: var(--accent-2)"></span> Planned</div>
+      <div class="cal-legend-item"><span class="cal-legend-dot" style="background: var(--accent)"></span> Today</div>
+    </div>
+    <div class="cal-grid cal-grid-dow" style="margin-top: 12px;">
+      ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => `<div class="cal-dow">${d}</div>`).join("")}
+    </div>
+    <div class="cal-grid" id="cal-cells-grid"></div>
+    <div id="cal-day-panel"></div>
+    <div id="cal-log-modal-slot"></div>
+  `;
+
+  paintCells(container, y, m, startDow, daysInMonth);
+
+  container.querySelector("#cal-prev").addEventListener("click", () => {
+    calCursor = new Date(y, m - 1, 1);
+    renderCalendar(container);
+  });
+  container.querySelector("#cal-next").addEventListener("click", () => {
+    calCursor = new Date(y, m + 1, 1);
+    renderCalendar(container);
+  });
+}
+
+// Paint (or repaint) just the day cells — leaves the day panel intact.
+function paintCells(container, y, m, startDow, daysInMonth) {
+  const grid = container.querySelector("#cal-cells-grid");
+  if (!grid) return;
   const data = getData();
   const today = todayStr();
 
@@ -44,37 +80,19 @@ function renderCalendar(container) {
         ${hasLogs ? `<div class="cal-log-dot" title="${logCount} exercise(s) logged">${logCount}</div>` : ""}
       </div>`;
   }
+  grid.innerHTML = cells;
 
-  container.innerHTML = `
-    <div class="cal-header">
-      <button class="btn btn-ghost" id="cal-prev">‹ Prev</button>
-      <div class="cal-month-label">${monthLabel}</div>
-      <button class="btn btn-ghost" id="cal-next">Next ›</button>
-    </div>
-    <div class="cal-legend">
-      <div class="cal-legend-item"><span class="cal-legend-dot" style="background: var(--good)"></span> Logged</div>
-      <div class="cal-legend-item"><span class="cal-legend-dot" style="background: var(--accent-2)"></span> Planned</div>
-      <div class="cal-legend-item"><span class="cal-legend-dot" style="background: var(--accent)"></span> Today</div>
-    </div>
-    <div class="cal-grid cal-grid-dow" style="margin-top: 12px;">
-      ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => `<div class="cal-dow">${d}</div>`).join("")}
-    </div>
-    <div class="cal-grid">${cells}</div>
-    <div id="cal-day-panel"></div>
-    <div id="cal-log-modal-slot"></div>
-  `;
-
-  container.querySelector("#cal-prev").addEventListener("click", () => {
-    calCursor = new Date(y, m - 1, 1);
-    renderCalendar(container);
-  });
-  container.querySelector("#cal-next").addEventListener("click", () => {
-    calCursor = new Date(y, m + 1, 1);
-    renderCalendar(container);
-  });
-  container.querySelectorAll(".cal-cell[data-date]").forEach(cell => {
+  grid.querySelectorAll(".cal-cell[data-date]").forEach(cell => {
     cell.addEventListener("click", () => renderDayPanel(container, cell.dataset.date));
   });
+}
+
+function refreshMonthCells(container) {
+  const y = calCursor.getFullYear();
+  const m = calCursor.getMonth();
+  const startDow = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  paintCells(container, y, m, startDow, daysInMonth);
 }
 
 // Debounced auto-save so we can save on every keystroke without hammering GitHub
@@ -108,7 +126,7 @@ function renderDayPanel(container, dateStr) {
       <label class="field-label">Daily cooldown</label>
       <textarea id="plan-cooldown" class="input" rows="2" placeholder="e.g. Full-body stretch 8 min">${escapeAttr(plan.cooldown || "")}</textarea>
 
-      <div class="day-panel-subtitle">Browse & Add Exercises</div>
+      <div class="day-panel-subtitle">Browse &amp; Add Exercises</div>
       <div class="group-chip-row" id="group-chip-row">
         ${Object.entries(MUSCLE_GROUPS).map(([gid, g]) => `
           <button class="group-chip" data-group="${gid}">${g.label}</button>
@@ -116,11 +134,9 @@ function renderDayPanel(container, dateStr) {
       </div>
       <div id="browse-sections"></div>
 
-      <div class="day-panel-subtitle">Planned Exercises</div>
+      <div class="day-panel-subtitle">Workout &amp; Logging</div>
       <div id="plan-ex-list" class="plan-ex-list"></div>
 
-      <div class="day-panel-subtitle">Log Your Sets</div>
-      <div id="day-log-list"></div>
       <div id="day-existing-logs"></div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px;">
@@ -151,23 +167,64 @@ function renderDayPanel(container, dateStr) {
 
   function renderPlanList() {
     const list = panel.querySelector("#plan-ex-list");
-    list.innerHTML = exerciseIds.length ? exerciseIds.map((id, idx) => `
-      <div class="plan-ex-chip" data-id="${id}">
-        <span class="plan-ex-serial">${idx + 1}</span>
-        <span class="plan-ex-name">${exerciseName(id)}</span>
-        <span class="remove-x" data-action="remove" data-id="${id}" title="Remove from plan">×</span>
-      </div>
-    `).join("") : `<div class="empty-state-small">No exercises added yet. Pick a muscle group above.</div>`;
+    const logsToday = getData().logs.filter(l => l.date === dateStr);
+    const loggedExIds = new Set(logsToday.map(l => l.exerciseId));
+
+    list.innerHTML = exerciseIds.length ? exerciseIds.map((id, idx) => {
+      const done = loggedExIds.has(id);
+      return `
+        <div class="plan-ex-chip ${done ? "done" : ""}" data-id="${id}">
+          <span class="plan-ex-serial">${idx + 1}</span>
+          <span class="plan-ex-reorder">
+            <button class="btn-icon reorder-up" data-idx="${idx}" title="Move up" ${idx === 0 ? "disabled" : ""}>▲</button>
+            <button class="btn-icon reorder-down" data-idx="${idx}" title="Move down" ${idx === exerciseIds.length - 1 ? "disabled" : ""}>▼</button>
+          </span>
+          <span class="plan-ex-name">${exerciseName(id)}</span>
+          ${done ? `<span class="day-log-status">✓ Done</span>` : ""}
+          <button class="btn btn-small log-btn ${done ? "btn-good" : "btn-primary"}" data-id="${id}">${done ? "Log again" : "Log sets"}</button>
+          <span class="remove-x" data-action="remove" data-id="${id}" title="Remove from plan">×</span>
+        </div>
+      `;
+    }).join("") : `<div class="empty-state-small">No exercises added yet. Pick a muscle group above.</div>`;
+
     list.querySelectorAll("[data-action='remove']").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         exerciseIds = exerciseIds.filter(id => id !== btn.dataset.id);
         saveDayPlan();
         renderPlanList();
-        renderDayLogList();
         renderBrowseSections();
-        // repaint the outer calendar so any indicator updates
-        setTimeout(() => renderCalendar(container), 0);
+        refreshMonthCells(container);
+      });
+    });
+    list.querySelectorAll(".reorder-up").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = parseInt(btn.dataset.idx);
+        if (i > 0) {
+          [exerciseIds[i - 1], exerciseIds[i]] = [exerciseIds[i], exerciseIds[i - 1]];
+          saveDayPlan();
+          renderPlanList();
+        }
+      });
+    });
+    list.querySelectorAll(".reorder-down").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = parseInt(btn.dataset.idx);
+        if (i < exerciseIds.length - 1) {
+          [exerciseIds[i + 1], exerciseIds[i]] = [exerciseIds[i], exerciseIds[i + 1]];
+          saveDayPlan();
+          renderPlanList();
+        }
+      });
+    });
+    list.querySelectorAll(".log-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        renderLogForm(modalSlot, btn.dataset.id, () => {
+          modalSlot.innerHTML = "";
+          renderExistingLogs();
+          renderPlanList();
+          refreshMonthCells(container);
+        }, dateStr);
       });
     });
   }
@@ -209,40 +266,7 @@ function renderDayPanel(container, dateStr) {
         saveDayPlan();
         renderBrowseSections();
         renderPlanList();
-        renderDayLogList();
-        setTimeout(() => renderCalendar(container), 0);
-      });
-    });
-  }
-
-  function renderDayLogList() {
-    const el3 = panel.querySelector("#day-log-list");
-    const logsToday = getData().logs.filter(l => l.date === dateStr);
-    const loggedExIds = new Set(logsToday.map(l => l.exerciseId));
-
-    if (exerciseIds.length === 0) {
-      el3.innerHTML = `<div class="empty-state-small">Add exercises to the plan above, then log them here once you've done them.</div>`;
-      return;
-    }
-    el3.innerHTML = exerciseIds.map((id, idx) => {
-      const done = loggedExIds.has(id);
-      return `
-        <div class="day-log-row ${done ? "done" : ""}">
-          <span class="day-log-serial">${idx + 1}</span>
-          <span class="day-log-name">${exerciseName(id)}</span>
-          ${done ? `<span class="day-log-status">✓ Done</span>` : ""}
-          <button class="btn btn-small log-btn ${done ? "btn-good" : "btn-primary"}" data-id="${id}">${done ? "Log again" : "Log sets"}</button>
-        </div>
-      `;
-    }).join("");
-    el3.querySelectorAll(".log-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        renderLogForm(modalSlot, btn.dataset.id, () => {
-          modalSlot.innerHTML = "";
-          renderExistingLogs();
-          renderDayLogList();
-          setTimeout(() => renderCalendar(container), 0);
-        }, dateStr);
+        refreshMonthCells(container);
       });
     });
   }
@@ -254,7 +278,7 @@ function renderDayPanel(container, dateStr) {
       el4.innerHTML = "";
       return;
     }
-    el4.innerHTML = `<div class="field-label" style="margin-top:18px;">Logged today</div>` + logsToday.map((l, idx) => `
+    el4.innerHTML = `<div class="field-label" style="margin-top:18px;">Logged sets</div>` + logsToday.map((l, idx) => `
       <div class="history-row">
         <div class="history-date">${idx + 1}.</div>
         <div class="history-main">
@@ -274,8 +298,8 @@ function renderDayPanel(container, dateStr) {
         if (!confirm("Delete this log entry?")) return;
         save(d => { d.logs = d.logs.filter(l => l.id !== btn.dataset.id); });
         renderExistingLogs();
-        renderDayLogList();
-        renderCalendar(container);
+        renderPlanList();
+        refreshMonthCells(container);
       });
     });
     el4.querySelectorAll(".edit-log").forEach(btn => {
@@ -283,8 +307,8 @@ function renderDayPanel(container, dateStr) {
         renderLogForm(modalSlot, btn.dataset.ex, () => {
           modalSlot.innerHTML = "";
           renderExistingLogs();
-          renderDayLogList();
-          setTimeout(() => renderCalendar(container), 0);
+          renderPlanList();
+          refreshMonthCells(container);
         }, dateStr, btn.dataset.id);
       });
     });
@@ -307,12 +331,11 @@ function renderDayPanel(container, dateStr) {
   panel.querySelector("#clear-plan").addEventListener("click", () => {
     if (!confirm("Clear the plan for this day? (Logged sets are kept.)")) return;
     save(data => { delete data.plans[dateStr]; });
-    renderCalendar(container);
+    refreshMonthCells(container);
   });
 
   renderPlanList();
   renderBrowseSections();
-  renderDayLogList();
   renderExistingLogs();
 }
 
