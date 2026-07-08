@@ -1,7 +1,7 @@
 {
-  "name": "Gym Schematic — Workout Tracker",
-  "short_name": "GymSchematic",
-  "description": "Interactive muscle map, workout logger, calendar planner and nutrition calculator.",
+  "name": "Ironomicon — Personal Lifting Grimoire",
+  "short_name": "Ironomicon",
+  "description": "Your personal grimoire of iron. Muscle map, workout logger, calendar planner and nutrition calculator.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
