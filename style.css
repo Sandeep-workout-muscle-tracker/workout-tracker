@@ -58,9 +58,11 @@ html, body {
   font-size: 14px;
   line-height: 1.5;
   min-height: 100vh;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+body {
+  overflow-x: clip;
 }
 
 body {
@@ -89,7 +91,8 @@ a { color: inherit; }
   padding: 24px 14px;
   position: sticky;
   top: 0;
-  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 .brand-mark {
@@ -170,7 +173,7 @@ a { color: inherit; }
   padding: 32px 40px 80px;
   max-width: 1280px;
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ========== VIEW HEADERS ========== */
@@ -360,15 +363,20 @@ a { color: inherit; }
 .chart-bar-back { fill: var(--bg-4); }
 
 /* ========== TRAIN VIEW ========== */
-.train-layout { display: grid; grid-template-columns: 460px 1fr; gap: 24px; align-items: start; }
+.train-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 
 .map-panel {
   background: #F5F3ED;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 20px;
-  position: sticky;
-  top: 32px;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
 }
 .map-canvas { display: flex; gap: 12px; justify-content: center; align-items: flex-start; }
 .map-figure { flex: 1; min-width: 0; text-align: center; }
@@ -494,7 +502,7 @@ a { color: inherit; }
 .ex-sub-section .ex-card { margin-bottom: 8px; }
 .ex-sub-section .ex-card:last-child { margin-bottom: 0; }
 
-.exercise-list { display: flex; flex-direction: column; gap: 10px; max-height: 720px; overflow-y: auto; padding-right: 4px; }
+.exercise-list { display: flex; flex-direction: column; gap: 10px; }
 .exercise-list::-webkit-scrollbar { width: 8px; }
 .exercise-list::-webkit-scrollbar-track { background: var(--bg-1); }
 .exercise-list::-webkit-scrollbar-thumb { background: var(--line-bright); border-radius: 4px; }
@@ -586,11 +594,11 @@ a { color: inherit; }
 
 /* ========== HISTORY ========== */
 .history-layout {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 24px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
+.history-layout > .card-elev { max-width: 720px; }
 .history-panel { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
 .history-row {
   display: flex; align-items: center; gap: 14px;
@@ -1050,7 +1058,7 @@ a { color: inherit; }
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .view-header { margin-bottom: 18px; }
@@ -1187,11 +1195,13 @@ a { color: inherit; }
   .sidenav { padding-top: max(12px, env(safe-area-inset-top)); }
 }
 
-/* Global mobile polish */
-html { -webkit-tap-highlight-color: rgba(255, 107, 61, 0.15); }
-body {
-  -webkit-touch-callout: none;
+/* Global polish — mobile-friendly but doesn't break desktop scroll */
+html {
+  -webkit-tap-highlight-color: rgba(255, 107, 61, 0.15);
   overscroll-behavior-y: contain;
+}
+@media (max-width: 980px) {
+  body { -webkit-touch-callout: none; }
 }
 .btn, .nav-item, .cat-tab, .main-cat-tab, .sub-cat-chip, .lib-tab, .group-chip {
   -webkit-user-select: none;
