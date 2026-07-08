@@ -22,8 +22,8 @@ function renderShell() {
     <div class="app-shell">
       <nav class="sidenav">
         <div class="brand">
-          <div class="brand-mark">GYM<span>//</span>SCHEMATIC</div>
-          <div class="brand-sub">workout control panel</div>
+          <div class="brand-mark">IRONOMICON</div>
+          <div class="brand-sub">personal lifting grimoire</div>
         </div>
         <div class="nav-list">
           ${VIEWS.map(v => `
@@ -240,7 +240,7 @@ function renderHistoryView(panel) {
       <h1>History &amp; Progress</h1>
       <p class="view-sub">Everything you've logged, plus a trend line for any exercise. Click ✎ to edit, × to delete.</p>
     </div>
-    <div class="history-layout" style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; align-items: start;">
+    <div class="history-layout">
       <div class="card-elev">
         <label class="field-label">Show progress for</label>
         <select id="progress-ex-select" class="select">
