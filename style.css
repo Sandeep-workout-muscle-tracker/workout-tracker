@@ -1163,18 +1163,19 @@ a { color: inherit; }
   .lib-toolbar .btn { flex-shrink: 0; }
   .lib-toolbar-spacer { flex-basis: 100%; height: 0; }
 
-  /* Train view - main-cat-tabs shouldn't overflow */
-  .main-cat-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
-  .main-cat-tabs::-webkit-scrollbar { display: none; }
-  .main-cat-tab { flex-shrink: 0; font-size: 12px; padding: 8px 14px; }
+  /* Train view - wrap category tabs so all are visible (no horizontal scroll to hide Core) */
+  .main-cat-tabs { flex-wrap: wrap; gap: 6px; overflow-x: visible; }
+  .main-cat-tab { font-size: 12px; padding: 8px 14px; }
   .sub-cat-chips { flex-wrap: wrap; }
   .sub-cat-chip { font-size: 11px; padding: 5px 10px; }
 
   /* Day panel - reduce padding on mobile */
   .day-panel { padding: 14px; }
   .day-panel-title { font-size: 16px; }
-  .plan-ex-chip { flex-wrap: wrap; gap: 6px; }
+  .plan-ex-chip { flex-wrap: wrap; gap: 6px; align-items: center; }
   .plan-ex-name { flex: 1 1 100%; order: -1; margin-bottom: 4px; }
+  /* Push the Log button (and the following ×) to the right on the button row */
+  .plan-ex-chip .log-btn { margin-left: auto; }
 
   /* Stopwatch */
   .stopwatch-card { flex-wrap: wrap; padding: 12px 14px; }
