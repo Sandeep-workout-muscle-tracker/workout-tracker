@@ -204,7 +204,7 @@ function renderProgressChart(container, exerciseId) {
       </div>
       <div class="chart-card-sub">${min}kg → ${max}kg</div>
     </div>
-    <svg viewBox="0 0 ${w} ${h}" class="chart-svg">
+    <svg viewBox="0 0 ${w} ${h}" class="chart-svg" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto;">
       <defs>
         <linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stop-color="#FF6B3D" stop-opacity="0.35"/>
