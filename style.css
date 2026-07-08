@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Gym // Schematic — Production theme
+   Ironomicon — Production theme
    Deeper, richer dark palette with subtle gradients and glowing accents.
    ========================================================================== */
 
@@ -98,9 +98,18 @@ a { color: inherit; }
 .brand-mark {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 17px;
-  letter-spacing: 0.01em;
+  font-size: 16px;
+  letter-spacing: 0.12em;
   padding: 0 8px;
+  position: relative;
+}
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  bottom: -6px; left: 8px;
+  width: 22px; height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 .brand-mark span { color: var(--accent); font-weight: 500; }
 .brand-sub {
@@ -109,7 +118,7 @@ a { color: inherit; }
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  margin-top: 4px;
+  margin-top: 12px;
   margin-bottom: 32px;
   padding: 0 8px;
 }
