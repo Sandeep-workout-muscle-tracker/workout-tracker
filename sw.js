@@ -2,7 +2,7 @@
 // offline. Network requests to api.github.com always go straight through so
 // sync is never served from cache.
 
-const CACHE_NAME = "gymsch-v1";
+const CACHE_NAME = "ironomicon-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
