@@ -1048,7 +1048,23 @@ a { color: inherit; }
     -webkit-overflow-scrolling: touch;
   }
   .sidenav::-webkit-scrollbar { display: none; }
-  .brand, .sync-indicator { display: none; }
+  /* Show the brand wordmark on mobile, but compactly */
+  .brand {
+    flex-shrink: 0;
+    padding-right: 8px;
+    margin-right: 4px;
+    border-right: 1px solid var(--line);
+  }
+  .brand-mark {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    padding: 0 4px 0 0;
+  }
+  .brand-mark::after {
+    display: none;   /* no room for the accent bar in the compact header */
+  }
+  .brand-sub { display: none; }   /* subtitle hidden on mobile */
+  .sync-indicator { display: none; }
   .nav-list { flex-direction: row; flex: none; gap: 4px; }
   .nav-item {
     padding: 8px 14px;
