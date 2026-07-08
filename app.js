@@ -42,14 +42,25 @@ function renderShell() {
   `;
 
   document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.addEventListener("click", () => {
-      currentView = btn.dataset.view;
-      renderShell();
-    });
+    btn.addEventListener("click", () => switchToView(btn.dataset.view));
   });
 
   updateSyncIndicator(lastSyncStatus, lastSyncDetail);
   renderView();
+}
+
+// Switch views WITHOUT rebuilding the sidenav — this preserves the horizontal
+// scroll position on mobile so tabs like Library/Nutrition don't snap back to
+// the start after tapping.
+function switchToView(viewId) {
+  if (viewId === currentView) return;
+  currentView = viewId;
+  document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.view === viewId);
+  });
+  renderView();
+  // Scroll the main content to the top on nav change (nice UX touch)
+  window.scrollTo(0, 0);
 }
 
 function renderView() {
