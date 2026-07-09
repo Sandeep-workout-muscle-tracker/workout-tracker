@@ -1,6 +1,50 @@
 // Workout logging, history, progress. The log form is now an inline right-drawer
 // (bottom sheet on mobile) that supports both creating and editing entries.
 
+// ---------- Per-exercise timer ----------
+// When user taps "Log sets" on an exercise, we start a stopwatch for it.
+// Timer state lives in memory only. Listeners tick every second so day-panel
+// chips can update in place without re-rendering the whole list.
+let activeExTimer = null;      // { exerciseId, dateStr, startedAt } | null
+let exTimerInterval = null;
+const exTimerListeners = [];   // fns called every tick
+
+function onExTimerTick(fn) {
+  exTimerListeners.push(fn);
+  return () => {
+    const i = exTimerListeners.indexOf(fn);
+    if (i >= 0) exTimerListeners.splice(i, 1);
+  };
+}
+function _tickExTimer() { exTimerListeners.forEach(fn => { try { fn(); } catch (e) {} }); }
+
+function startExTimer(exerciseId, dateStr) {
+  activeExTimer = { exerciseId, dateStr: dateStr || todayStr(), startedAt: Date.now() };
+  if (exTimerInterval) clearInterval(exTimerInterval);
+  exTimerInterval = setInterval(_tickExTimer, 1000);
+  _tickExTimer();
+}
+function stopExTimer() {
+  const t = activeExTimer;
+  activeExTimer = null;
+  if (exTimerInterval) { clearInterval(exTimerInterval); exTimerInterval = null; }
+  _tickExTimer();
+  if (!t) return 0;
+  return Math.max(1, Math.round((Date.now() - t.startedAt) / 1000));
+}
+function activeExTimerSeconds() {
+  if (!activeExTimer) return 0;
+  return Math.max(0, Math.floor((Date.now() - activeExTimer.startedAt) / 1000));
+}
+function fmtDuration(sec) {
+  if (!sec || sec < 0) return "0:00";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -45,6 +89,11 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   const initialSets = existing?.sets?.length ? existing.sets : [{ weight: "", reps: "" }, { weight: "", reps: "" }];
   const initialNote = existing?.note || "";
 
+  // Start a fresh per-exercise stopwatch on new-log open (edit mode preserves existing duration)
+  if (!isEdit) {
+    startExTimer(exerciseId, presetDate || todayStr());
+  }
+
   container.innerHTML = `
     <div class="log-drawer-backdrop" id="log-backdrop"></div>
     <div class="log-drawer" role="dialog" aria-label="Log entry">
@@ -53,6 +102,7 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
           <div class="log-drawer-title">${isEdit ? "Edit" : "Log"} — ${name}</div>
           <div class="log-drawer-sub">${isEdit ? "Update this entry" : "Record your sets"}</div>
         </div>
+        ${!isEdit ? `<div class="log-drawer-timer" id="log-drawer-timer" title="Time on this exercise">⏱ 0:00</div>` : ""}
         <button class="btn-icon" id="cancel-log" title="Close">×</button>
       </div>
 
@@ -98,7 +148,11 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   }
   initialSets.forEach(s => addRow(s.weight, s.reps));
 
-  function close() { container.innerHTML = ""; }
+  function close() {
+    // If drawer closes without Save, discard the timer for this exercise.
+    if (!isEdit) stopExTimer();
+    container.innerHTML = "";
+  }
   container.querySelector("#add-set-row").addEventListener("click", () => addRow());
   container.querySelector("#cancel-log").addEventListener("click", close);
   container.querySelector("#cancel-log-2").addEventListener("click", close);
@@ -114,22 +168,33 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
 
     if (sets.length === 0) { alert("Add at least one set with a weight or rep count."); return; }
 
+    // Snapshot & stop the exercise timer BEFORE we save so we can attach duration.
+    const durationSec = isEdit ? null : stopExTimer();
+
     if (isEdit) {
       save(data => {
         const idx = data.logs.findIndex(l => l.id === editLogId);
         if (idx !== -1) {
-          // preserve any existing warmup/cooldown fields that may already be there
           data.logs[idx] = { ...data.logs[idx], date, exerciseId, sets, note };
         }
       });
     } else {
       save(data => {
-        data.logs.push({ id: uid(), date, exerciseId, sets, note });
+        data.logs.push({ id: uid(), date, exerciseId, sets, note, durationSec });
       });
     }
-    close();
+    container.innerHTML = "";
     onSaved();
   });
+
+  // Tick the drawer timer readout every second while the drawer is open (new-log mode only).
+  if (!isEdit) {
+    const timerEl = container.querySelector("#log-drawer-timer");
+    const unsubscribe = onExTimerTick(() => {
+      if (!timerEl.isConnected) { unsubscribe(); return; }
+      timerEl.textContent = `⏱ ${fmtDuration(activeExTimerSeconds())}`;
+    });
+  }
 }
 
 function renderHistory(container) {
@@ -145,7 +210,7 @@ function renderHistory(container) {
     <div class="history-row ${removed ? "row-removed" : ""}" data-id="${l.id}">
       <div class="history-date">${l.date}</div>
       <div class="history-main">
-        <div class="history-exercise">${exerciseName(l.exerciseId)}${removed ? ` <span class="tag tag-removed">removed</span>` : ""}</div>
+        <div class="history-exercise">${exerciseName(l.exerciseId)}${removed ? ` <span class="tag tag-removed">removed</span>` : ""}${l.durationSec ? ` <span class="history-duration">⏱ ${fmtDuration(l.durationSec)}</span>` : ""}</div>
         <div class="history-sets">${l.sets.map((s, i) => `<span class="set-chip">${i + 1}. ${s.weight}kg × ${s.reps}</span>`).join(" ")}</div>
         ${l.note ? `<div class="history-note">${l.note}</div>` : ""}
       </div>
