@@ -120,12 +120,6 @@ function renderDayPanel(container, dateStr) {
       <label class="field-label" style="margin-top: 20px;">Plan label</label>
       <input type="text" id="plan-title" class="input" placeholder="e.g. Push — Chest &amp; Shoulders" value="${escapeAttr(plan.title || "")}" />
 
-      <label class="field-label">Daily warmup (applies to whole workout)</label>
-      <textarea id="plan-warmup" class="input" rows="2" placeholder="e.g. 5 min bike, arm circles, band pull-aparts">${escapeAttr(plan.warmup || "")}</textarea>
-
-      <label class="field-label">Daily cooldown</label>
-      <textarea id="plan-cooldown" class="input" rows="2" placeholder="e.g. Full-body stretch 8 min">${escapeAttr(plan.cooldown || "")}</textarea>
-
       <div class="day-panel-subtitle">Browse &amp; Add Exercises</div>
       <div class="group-chip-row" id="group-chip-row">
         ${Object.entries(MUSCLE_GROUPS).map(([gid, g]) => `
@@ -147,20 +141,25 @@ function renderDayPanel(container, dateStr) {
 
   renderStopwatch(panel.querySelector("#stopwatch-slot"), dateStr);
 
-  // Auto-save the title/warmup/cooldown on any change
-  ["plan-title", "plan-warmup", "plan-cooldown"].forEach(id => {
+  // Auto-save the plan label on change
+  ["plan-title"].forEach(id => {
     panel.querySelector(`#${id}`).addEventListener("input", saveDayPlan);
   });
 
   function saveDayPlan() {
     const title = panel.querySelector("#plan-title").value;
-    const warmup = panel.querySelector("#plan-warmup").value;
-    const cooldown = panel.querySelector("#plan-cooldown").value;
     autoSave(data => {
-      if (!exerciseIds.length && !title.trim() && !warmup.trim() && !cooldown.trim()) {
+      const existing = data.plans[dateStr] || {};
+      if (!exerciseIds.length && !title.trim()) {
         delete data.plans[dateStr];
       } else {
-        data.plans[dateStr] = { title, exerciseIds, warmup, cooldown };
+        // Preserve any legacy warmup/cooldown strings on the plan so we don't
+        // silently lose data the user typed in an earlier build.
+        data.plans[dateStr] = {
+          ...existing,
+          title,
+          exerciseIds,
+        };
       }
     });
   }
@@ -172,6 +171,10 @@ function renderDayPanel(container, dateStr) {
 
     list.innerHTML = exerciseIds.length ? exerciseIds.map((id, idx) => {
       const done = loggedExIds.has(id);
+      // Total time already logged today for this exercise (sum across "Log again" entries)
+      const totalSec = logsToday
+        .filter(l => l.exerciseId === id)
+        .reduce((sum, l) => sum + (l.durationSec || 0), 0);
       return `
         <div class="plan-ex-chip ${done ? "done" : ""}" data-id="${id}">
           <span class="plan-ex-serial">${idx + 1}</span>
@@ -180,6 +183,7 @@ function renderDayPanel(container, dateStr) {
             <button class="btn-icon reorder-down" data-idx="${idx}" title="Move down" ${idx === exerciseIds.length - 1 ? "disabled" : ""}>▼</button>
           </span>
           <span class="plan-ex-name">${exerciseName(id)}</span>
+          <span class="plan-ex-timer" data-ex-timer="${id}">${totalSec ? `⏱ ${fmtDuration(totalSec)}` : ""}</span>
           ${done ? `<span class="day-log-status">✓ Done</span>` : ""}
           <button class="btn btn-small log-btn ${done ? "btn-good" : "btn-primary"}" data-id="${id}">${done ? "Log again" : "Log sets"}</button>
           <span class="remove-x" data-action="remove" data-id="${id}" title="Remove from plan">×</span>
@@ -225,6 +229,22 @@ function renderDayPanel(container, dateStr) {
           renderPlanList();
           refreshMonthCells(container);
         }, dateStr);
+      });
+    });
+
+    // Live timer chip update: on each tick, find the row for the active exercise
+    // and inject the current running time. Static durations for finished
+    // exercises are already rendered above.
+    onExTimerTick(() => {
+      if (!list.isConnected) return;
+      list.querySelectorAll("[data-ex-timer]").forEach(span => {
+        const exId = span.dataset.exTimer;
+        if (activeExTimer && activeExTimer.exerciseId === exId && activeExTimer.dateStr === dateStr) {
+          span.textContent = `⏱ ${fmtDuration(activeExTimerSeconds())}`;
+          span.classList.add("running");
+        } else {
+          span.classList.remove("running");
+        }
       });
     });
   }
@@ -282,7 +302,7 @@ function renderDayPanel(container, dateStr) {
       <div class="history-row">
         <div class="history-date">${idx + 1}.</div>
         <div class="history-main">
-          <div class="history-exercise">${exerciseName(l.exerciseId)}</div>
+          <div class="history-exercise">${exerciseName(l.exerciseId)}${l.durationSec ? ` <span class="history-duration">⏱ ${fmtDuration(l.durationSec)}</span>` : ""}</div>
           <div class="history-sets">${l.sets.map((s, i) => `<span class="set-chip">${i + 1}. ${s.weight}kg × ${s.reps}</span>`).join(" ")}</div>
           ${l.note ? `<div class="history-note">${l.note}</div>` : ""}
         </div>
