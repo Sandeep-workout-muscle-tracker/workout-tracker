@@ -8,6 +8,9 @@ const MUSCLE_GROUPS = {
   arms:      { label: "Arms",      subs: ["biceps", "triceps", "forearms"] },
   legs:      { label: "Legs",      subs: ["quads", "hamstrings", "glutes", "calves", "adductors"] },
   core:      { label: "Core",      subs: ["abs_upper", "abs_lower", "obliques"] },
+  cardio:    { label: "Cardio",    subs: ["running", "cycling", "rowing", "elliptical", "swimming", "hiit", "jump_rope", "stair_climber"] },
+  warmup:    { label: "Warmup",    subs: ["warmup_dynamic", "warmup_mobility", "warmup_activation"] },
+  cooldown:  { label: "Cooldown",  subs: ["cooldown_stretch", "cooldown_foam_roll", "cooldown_breathing"] },
 };
 
 const SUBMUSCLE_LABELS = {
@@ -17,11 +20,16 @@ const SUBMUSCLE_LABELS = {
   biceps: "Biceps", triceps: "Triceps", forearms: "Forearms",
   quads: "Quadriceps", hamstrings: "Hamstrings", glutes: "Glutes", calves: "Calves", adductors: "Inner / Outer Thigh",
   abs_upper: "Upper Abs", abs_lower: "Lower Abs", obliques: "Obliques",
+  running: "Running / Treadmill", cycling: "Cycling / Bike", rowing: "Rowing", elliptical: "Elliptical",
+  swimming: "Swimming", hiit: "HIIT / Circuits", jump_rope: "Jump Rope", stair_climber: "Stair Climber",
+  warmup_dynamic: "Dynamic Stretches", warmup_mobility: "Mobility", warmup_activation: "Activation Drills",
+  cooldown_stretch: "Static Stretches", cooldown_foam_roll: "Foam Rolling", cooldown_breathing: "Breathing",
 };
 
 const EQUIP_LABELS = {
   barbell: "Barbell", dumbbell: "Dumbbell", cable: "Cable", machine: "Machine",
   bodyweight: "Bodyweight", kettlebell: "Kettlebell", band: "Band", smith: "Smith Machine", plate: "Plate",
+  cardio_machine: "Cardio Machine", outdoor: "Outdoor", pool: "Pool", rope: "Rope", mat: "Mat", foam_roller: "Foam Roller",
 };
 
 function ex(id, name, sub, equip, note, secondary) {
@@ -221,6 +229,88 @@ const SEED_EXERCISES = [
   ex("hanging_oblique_raise", "Hanging Oblique Raise", "obliques", "bodyweight", "Hang from a bar, raise the knees up and to one side.", []),
   ex("db_side_bend", "Dumbbell Side Bend", "obliques", "dumbbell", "Dumbbell in one hand, bend directly sideways and back up.", []),
   ex("landmine_rotation", "Landmine Rotation", "obliques", "barbell", "One end of a bar anchored, rotate it side to side at arm's length.", []),
+
+  // ---- CARDIO: RUNNING ----
+  ex("treadmill_steady", "Treadmill Steady-State Run", "running", "cardio_machine", "Comfortable pace held for 20-45 minutes, conversational effort.", []),
+  ex("outdoor_run", "Outdoor Run", "running", "outdoor", "Open pace run outdoors. Vary terrain for interest.", []),
+  ex("interval_sprints", "Interval Sprints", "running", "outdoor", "Alternate hard sprints (15-30s) with slow recovery jogs (60-90s).", []),
+  ex("treadmill_incline_walk", "Incline Treadmill Walk", "running", "cardio_machine", "Steep incline (10-15%) at moderate pace. Great for zone-2 cardio.", []),
+
+  // ---- CARDIO: CYCLING ----
+  ex("stationary_bike", "Stationary Bike", "cycling", "cardio_machine", "Steady effort on an upright or recumbent bike.", []),
+  ex("outdoor_cycling", "Outdoor Cycling", "cycling", "outdoor", "Road or trail. Track by time or distance.", []),
+  ex("assault_bike", "Assault / Air Bike", "cycling", "cardio_machine", "Fan-resistance bike. Brutal for HIIT intervals.", []),
+  ex("spin_class", "Spin Class", "cycling", "cardio_machine", "Instructor-led high-intensity cycling session.", []),
+
+  // ---- CARDIO: ROWING ----
+  ex("rowing_steady", "Rowing - Steady State", "rowing", "cardio_machine", "Consistent stroke rate around 22-26 spm. Great full-body cardio.", []),
+  ex("rowing_intervals", "Rowing Intervals", "rowing", "cardio_machine", "500m repeats with 1-2 min rest, or Tabata-style pieces.", []),
+
+  // ---- CARDIO: ELLIPTICAL ----
+  ex("elliptical_steady", "Elliptical - Steady", "elliptical", "cardio_machine", "Low-impact cross-trainer session. Push and pull the handles.", []),
+
+  // ---- CARDIO: SWIMMING ----
+  ex("swim_freestyle", "Swimming - Freestyle", "swimming", "pool", "Front crawl laps at steady pace.", []),
+  ex("swim_breaststroke", "Swimming - Breaststroke", "swimming", "pool", "Steady breaststroke laps. Easier on the shoulders.", []),
+  ex("swim_intervals", "Swim Intervals", "swimming", "pool", "50m or 100m sprints with rest between.", []),
+
+  // ---- CARDIO: HIIT ----
+  ex("hiit_circuit", "HIIT Circuit", "hiit", "bodyweight", "Rotate through 4-6 exercises: 40s work, 20s rest, 3-5 rounds.", []),
+  ex("burpees", "Burpees", "hiit", "bodyweight", "Squat, jump back to plank, push-up, jump forward, jump up. Repeat.", []),
+  ex("mountain_climbers", "Mountain Climbers", "hiit", "bodyweight", "In plank, drive knees alternately toward chest as fast as controlled.", []),
+  ex("kb_swings", "Kettlebell Swings", "hiit", "kettlebell", "Hinge and drive the bell to eye level. Hip snap, not arms.", []),
+
+  // ---- CARDIO: JUMP ROPE ----
+  ex("jump_rope_basic", "Jump Rope - Basic", "jump_rope", "rope", "Standard two-foot bounce. Aim for 60-120s unbroken sets.", []),
+  ex("jump_rope_double_under", "Jump Rope - Double Under", "jump_rope", "rope", "Rope passes twice per jump. Advanced skill.", []),
+
+  // ---- CARDIO: STAIR CLIMBER ----
+  ex("stair_climber", "Stair Climber", "stair_climber", "cardio_machine", "Steady climbing on a stepmill. Don't lean on the handles.", []),
+
+  // ---- WARMUP: DYNAMIC ----
+  ex("arm_circles", "Arm Circles", "warmup_dynamic", "bodyweight", "Small to large circles, forwards then backwards. 10 each direction.", []),
+  ex("leg_swings", "Leg Swings", "warmup_dynamic", "bodyweight", "Hold something for balance, swing one leg front-back, then side-side. 10 each.", []),
+  ex("hip_circles", "Hip Circles", "warmup_dynamic", "bodyweight", "Hands on hips, make wide circles with your pelvis. 10 each direction.", []),
+  ex("torso_twists", "Torso Twists", "warmup_dynamic", "bodyweight", "Feet planted, rotate the upper body left and right with relaxed arms.", []),
+  ex("high_knees", "High Knees", "warmup_dynamic", "bodyweight", "Jog in place driving knees to hip height. 30-60s.", []),
+  ex("jumping_jacks", "Jumping Jacks", "warmup_dynamic", "bodyweight", "Classic. 30-60s to raise heart rate.", []),
+
+  // ---- WARMUP: MOBILITY ----
+  ex("cat_cow", "Cat-Cow", "warmup_mobility", "mat", "On all fours, alternate arching and rounding the spine. 8-10 reps.", []),
+  ex("worlds_greatest_stretch", "World's Greatest Stretch", "warmup_mobility", "mat", "Lunge, hand inside foot, twist and reach up. 5 each side.", []),
+  ex("thoracic_rotations", "Thoracic Rotations", "warmup_mobility", "mat", "Quadruped, hand behind head, rotate elbow up toward ceiling. 8 each side.", []),
+  ex("hip_openers", "90/90 Hip Openers", "warmup_mobility", "mat", "Seated, both knees at 90°, rotate side to side.", []),
+  ex("shoulder_dislocates", "Shoulder Dislocates", "warmup_mobility", "band", "Wide grip on band, pass overhead front to back. 10-15 reps.", []),
+
+  // ---- WARMUP: ACTIVATION ----
+  ex("band_pull_aparts", "Band Pull-Aparts", "warmup_activation", "band", "Band at chest height, pull apart to activate rear delts. 15-20 reps.", []),
+  ex("glute_bridges", "Glute Bridges", "warmup_activation", "bodyweight", "Lie on back, squeeze glutes to lift hips. 10-15 reps.", []),
+  ex("scap_pushups", "Scapular Push-Ups", "warmup_activation", "bodyweight", "Plank position, only move the shoulder blades up and down. 10 reps.", []),
+  ex("empty_bar_sets", "Empty Bar Warmup Sets", "warmup_activation", "barbell", "Rehearse today's main lift with just the bar. 1-2 sets of 8-10.", []),
+  ex("bird_dogs", "Bird Dogs", "warmup_activation", "bodyweight", "On all fours, extend opposite arm and leg. 8-10 each side.", []),
+  ex("dead_bugs", "Dead Bugs", "warmup_activation", "bodyweight", "On back, arms up. Lower opposite arm and leg while bracing core. 8 each.", []),
+
+  // ---- COOLDOWN: STATIC STRETCH ----
+  ex("chest_doorway", "Chest Doorway Stretch", "cooldown_stretch", "bodyweight", "Forearm on door frame, step through. Hold 30s each side.", []),
+  ex("hamstring_stretch", "Hamstring Stretch", "cooldown_stretch", "mat", "Seated forward fold or single-leg version. Hold 30s each side.", []),
+  ex("quad_stretch", "Standing Quad Stretch", "cooldown_stretch", "bodyweight", "Grab one ankle, pull heel to glute. Hold 30s each side.", []),
+  ex("childs_pose", "Child's Pose", "cooldown_stretch", "mat", "Kneel, sit back on heels, reach forward. Hold 30-60s.", []),
+  ex("cobra_stretch", "Cobra Stretch", "cooldown_stretch", "mat", "Prone, press up through hands to arch back. Hold 20-30s.", []),
+  ex("pigeon_pose", "Pigeon Pose", "cooldown_stretch", "mat", "One shin forward across mat, other leg back. Deep hip stretch. 30-60s each.", []),
+  ex("figure_four", "Figure-Four Stretch", "cooldown_stretch", "mat", "Lying on back, ankle over opposite knee, pull thigh toward chest. 30s each.", []),
+  ex("triceps_overhead", "Triceps Overhead Stretch", "cooldown_stretch", "bodyweight", "Reach one arm overhead and behind the head. Pull elbow gently. 20s each.", []),
+
+  // ---- COOLDOWN: FOAM ROLL ----
+  ex("foam_it_band", "Foam Roll - IT Band", "cooldown_foam_roll", "foam_roller", "Side lying, roll from hip to just above the knee. 30-60s each side.", []),
+  ex("foam_quads", "Foam Roll - Quads", "cooldown_foam_roll", "foam_roller", "Prone on the roller, roll from hip to just above the knee.", []),
+  ex("foam_upper_back", "Foam Roll - Upper Back", "cooldown_foam_roll", "foam_roller", "Roller under upper back, arms crossed. Roll from mid-back to shoulders.", []),
+  ex("foam_calves", "Foam Roll - Calves", "cooldown_foam_roll", "foam_roller", "Seated, roller under calves. Cross one leg over the other for pressure.", []),
+  ex("foam_glutes", "Foam Roll - Glutes", "cooldown_foam_roll", "foam_roller", "Seated on roller, cross one ankle over knee, lean into that side.", []),
+
+  // ---- COOLDOWN: BREATHING ----
+  ex("box_breathing", "Box Breathing", "cooldown_breathing", "bodyweight", "4s in, 4s hold, 4s out, 4s hold. 5-10 rounds. Calms the nervous system.", []),
+  ex("diaphragmatic", "Diaphragmatic Breathing", "cooldown_breathing", "mat", "Lie down, one hand on belly. Slow nasal breaths, belly rises first. 5 min.", []),
+  ex("478_breathing", "4-7-8 Breathing", "cooldown_breathing", "bodyweight", "Inhale 4s, hold 7s, exhale 8s. 4-6 rounds. Great before sleep.", []),
 ];
 
 // Convenience lookup — populated dynamically via library.js so user overrides are respected.
