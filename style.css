@@ -775,13 +775,67 @@ a { color: inherit; }
   background: var(--good-soft);
 }
 .plan-ex-serial {
-  width: 24px; height: 24px; border-radius: 4px;
+  width: 26px; height: 26px; border-radius: 4px;
   background: var(--bg-4); color: var(--accent);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
   flex-shrink: 0;
 }
+/* Editable serial: has a border cue so users know it's tappable */
+button.plan-ex-serial.editable {
+  border: 1px solid var(--line-bright);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+button.plan-ex-serial.editable:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.05);
+}
 .plan-ex-chip.done .plan-ex-serial { background: var(--good); color: #062814; }
+.plan-ex-chip.done button.plan-ex-serial.editable { border-color: rgba(74,222,128,0.5); }
+.plan-ex-chip.done button.plan-ex-serial.editable:hover { border-color: var(--good); }
+
+/* Serial editor popover — floats over the page, closes on outside click */
+.serial-editor {
+  position: absolute;
+  z-index: 100;
+  width: 240px;
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,107,61,0.15);
+  animation: fade-in 0.12s ease;
+}
+.serial-editor-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.serial-editor-row {
+  display: flex; gap: 6px; align-items: center; margin-bottom: 10px;
+}
+.serial-editor-input {
+  margin-bottom: 0 !important;
+  flex: 1;
+  min-height: 36px !important;
+  font-size: 15px !important;
+  font-family: var(--font-mono);
+  text-align: center;
+  font-weight: 600;
+}
+.serial-editor-go { flex-shrink: 0; }
+.serial-editor-quick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.serial-editor-quick .btn { padding: 6px 8px; font-size: 11px; }
 .plan-ex-reorder {
   display: inline-flex; flex-direction: column; gap: 0;
   flex-shrink: 0;
