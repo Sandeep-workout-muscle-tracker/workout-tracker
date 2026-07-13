@@ -164,23 +164,62 @@ function renderDayPanel(container, dateStr) {
     });
   }
 
+  // Given an exerciseId, return which of the 3 workout sections it belongs to.
+  function categorizeEx(id) {
+    const { exercise } = findExerciseById(id);
+    if (!exercise || !exercise.sub) return "main";
+    const sub = exercise.sub;
+    for (const [gid, g] of Object.entries(MUSCLE_GROUPS)) {
+      if (g.subs.includes(sub)) {
+        if (gid === "warmup") return "warmup";
+        if (gid === "cooldown") return "cooldown";
+        return "main";
+      }
+    }
+    return "main";
+  }
+
+  // Split exerciseIds into 3 sub-arrays (warmup / main / cooldown) preserving
+  // the relative order within each. Returns { sections, rebuild } — call
+  // rebuild() after mutating the sub-arrays to flatten back into exerciseIds.
+  function computeSections() {
+    const sections = { warmup: [], main: [], cooldown: [] };
+    exerciseIds.forEach(id => { sections[categorizeEx(id)].push(id); });
+    return sections;
+  }
+  function rebuildFromSections(sections) {
+    exerciseIds = [...sections.warmup, ...sections.main, ...sections.cooldown];
+  }
+
   function renderPlanList() {
     const list = panel.querySelector("#plan-ex-list");
     const logsToday = getData().logs.filter(l => l.date === dateStr);
     const loggedExIds = new Set(logsToday.map(l => l.exerciseId));
 
-    list.innerHTML = exerciseIds.length ? exerciseIds.map((id, idx) => {
+    if (exerciseIds.length === 0) {
+      list.innerHTML = `<div class="empty-state-small">No exercises added yet. Pick a muscle group above.</div>`;
+      return;
+    }
+
+    const sections = computeSections();
+    const meta = [
+      { key: "warmup",   label: "Warmup" },
+      { key: "main",     label: "Main Workout" },
+      { key: "cooldown", label: "Cooldown" },
+    ];
+
+    function renderRow(id, idx, sectionLen, sectionKey) {
       const done = loggedExIds.has(id);
       // Total time already logged today for this exercise (sum across "Log again" entries)
       const totalSec = logsToday
         .filter(l => l.exerciseId === id)
         .reduce((sum, l) => sum + (l.durationSec || 0), 0);
       return `
-        <div class="plan-ex-chip ${done ? "done" : ""}" data-id="${id}">
-          <button class="plan-ex-serial editable" data-idx="${idx}" title="Tap to change position">${idx + 1}</button>
+        <div class="plan-ex-chip ${done ? "done" : ""}" data-id="${id}" data-section="${sectionKey}">
+          <button class="plan-ex-serial editable" data-idx="${idx}" data-section="${sectionKey}" title="Tap to change position within ${sectionKey}">${idx + 1}</button>
           <span class="plan-ex-reorder">
-            <button class="btn-icon reorder-up" data-idx="${idx}" title="Move up" ${idx === 0 ? "disabled" : ""}>▲</button>
-            <button class="btn-icon reorder-down" data-idx="${idx}" title="Move down" ${idx === exerciseIds.length - 1 ? "disabled" : ""}>▼</button>
+            <button class="btn-icon reorder-up" data-idx="${idx}" data-section="${sectionKey}" title="Move up" ${idx === 0 ? "disabled" : ""}>▲</button>
+            <button class="btn-icon reorder-down" data-idx="${idx}" data-section="${sectionKey}" title="Move down" ${idx === sectionLen - 1 ? "disabled" : ""}>▼</button>
           </span>
           <span class="plan-ex-name">${exerciseName(id)}</span>
           <span class="plan-ex-timer" data-ex-timer="${id}">${totalSec ? `⏱ ${fmtDuration(totalSec)}` : ""}</span>
@@ -189,13 +228,29 @@ function renderDayPanel(container, dateStr) {
           <span class="remove-x" data-action="remove" data-id="${id}" title="Remove from plan">×</span>
         </div>
       `;
-    }).join("") : `<div class="empty-state-small">No exercises added yet. Pick a muscle group above.</div>`;
+    }
 
-    // Serial number → inline position edit popover
+    list.innerHTML = meta.map(m => {
+      const ids = sections[m.key];
+      if (ids.length === 0) return "";
+      return `
+        <div class="plan-section plan-section-${m.key}">
+          <div class="plan-section-header">
+            <span class="plan-section-label">${m.label}</span>
+            <span class="plan-section-count">${ids.length}</span>
+          </div>
+          ${ids.map((id, idx) => renderRow(id, idx, ids.length, m.key)).join("")}
+        </div>
+      `;
+    }).join("");
+
+    // Serial number → inline position edit popover (scoped to its section)
     list.querySelectorAll(".plan-ex-serial.editable").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        openSerialEditor(btn, parseInt(btn.dataset.idx, 10));
+        const sectionKey = btn.dataset.section;
+        const idx = parseInt(btn.dataset.idx, 10);
+        openSerialEditor(btn, idx, sections, sectionKey);
       });
     });
 
@@ -211,9 +266,12 @@ function renderDayPanel(container, dateStr) {
     });
     list.querySelectorAll(".reorder-up").forEach(btn => {
       btn.addEventListener("click", () => {
-        const i = parseInt(btn.dataset.idx);
+        const sectionKey = btn.dataset.section;
+        const arr = sections[sectionKey];
+        const i = parseInt(btn.dataset.idx, 10);
         if (i > 0) {
-          [exerciseIds[i - 1], exerciseIds[i]] = [exerciseIds[i], exerciseIds[i - 1]];
+          [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+          rebuildFromSections(sections);
           saveDayPlan();
           renderPlanList();
         }
@@ -221,9 +279,12 @@ function renderDayPanel(container, dateStr) {
     });
     list.querySelectorAll(".reorder-down").forEach(btn => {
       btn.addEventListener("click", () => {
-        const i = parseInt(btn.dataset.idx);
-        if (i < exerciseIds.length - 1) {
-          [exerciseIds[i + 1], exerciseIds[i]] = [exerciseIds[i], exerciseIds[i + 1]];
+        const sectionKey = btn.dataset.section;
+        const arr = sections[sectionKey];
+        const i = parseInt(btn.dataset.idx, 10);
+        if (i < arr.length - 1) {
+          [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
+          rebuildFromSections(sections);
           saveDayPlan();
           renderPlanList();
         }
@@ -257,18 +318,19 @@ function renderDayPanel(container, dateStr) {
     });
   }
 
-  // Popover-style inline editor for changing an exercise's position number.
-  // Click the serial → small picker appears with an input + shortcut buttons
-  // (Top / Up / Down / Bottom). Confirm reorders the list and closes.
-  function openSerialEditor(anchorEl, fromIdx) {
+  // Popover-style inline editor for changing an exercise's position number
+  // WITHIN its section (warmup / main / cooldown). Serials are section-local.
+  function openSerialEditor(anchorEl, fromIdx, sections, sectionKey) {
     // Close any existing popover first
     document.querySelectorAll(".serial-editor").forEach(el => el.remove());
 
-    const total = exerciseIds.length;
+    const arr = sections[sectionKey];
+    const total = arr.length;
+    const sectionLabel = { warmup: "Warmup", main: "Main", cooldown: "Cooldown" }[sectionKey] || "";
     const popover = document.createElement("div");
     popover.className = "serial-editor";
     popover.innerHTML = `
-      <div class="serial-editor-label">Move to position (1–${total})</div>
+      <div class="serial-editor-label">Move within ${sectionLabel} (1–${total})</div>
       <div class="serial-editor-row">
         <input type="number" class="input serial-editor-input" min="1" max="${total}" value="${fromIdx + 1}" inputmode="numeric" />
         <button class="btn btn-primary btn-small serial-editor-go">Move</button>
@@ -301,14 +363,14 @@ function renderDayPanel(container, dateStr) {
     function onDocClick(e) {
       if (!popover.contains(e.target) && e.target !== anchorEl) close();
     }
-    // Delay a tick so THIS click doesn't immediately close the popover
     setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
 
     function moveTo(toIdx) {
       toIdx = Math.max(0, Math.min(total - 1, toIdx));
       if (toIdx === fromIdx) { close(); return; }
-      const [item] = exerciseIds.splice(fromIdx, 1);
-      exerciseIds.splice(toIdx, 0, item);
+      const [item] = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, item);
+      rebuildFromSections(sections);
       saveDayPlan();
       close();
       renderPlanList();
