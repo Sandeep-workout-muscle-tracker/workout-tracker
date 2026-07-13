@@ -177,7 +177,7 @@ function renderDayPanel(container, dateStr) {
         .reduce((sum, l) => sum + (l.durationSec || 0), 0);
       return `
         <div class="plan-ex-chip ${done ? "done" : ""}" data-id="${id}">
-          <span class="plan-ex-serial">${idx + 1}</span>
+          <button class="plan-ex-serial editable" data-idx="${idx}" title="Tap to change position">${idx + 1}</button>
           <span class="plan-ex-reorder">
             <button class="btn-icon reorder-up" data-idx="${idx}" title="Move up" ${idx === 0 ? "disabled" : ""}>▲</button>
             <button class="btn-icon reorder-down" data-idx="${idx}" title="Move down" ${idx === exerciseIds.length - 1 ? "disabled" : ""}>▼</button>
@@ -190,6 +190,14 @@ function renderDayPanel(container, dateStr) {
         </div>
       `;
     }).join("") : `<div class="empty-state-small">No exercises added yet. Pick a muscle group above.</div>`;
+
+    // Serial number → inline position edit popover
+    list.querySelectorAll(".plan-ex-serial.editable").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openSerialEditor(btn, parseInt(btn.dataset.idx, 10));
+      });
+    });
 
     list.querySelectorAll("[data-action='remove']").forEach(btn => {
       btn.addEventListener("click", (e) => {
@@ -245,6 +253,86 @@ function renderDayPanel(container, dateStr) {
         } else {
           span.classList.remove("running");
         }
+      });
+    });
+  }
+
+  // Popover-style inline editor for changing an exercise's position number.
+  // Click the serial → small picker appears with an input + shortcut buttons
+  // (Top / Up / Down / Bottom). Confirm reorders the list and closes.
+  function openSerialEditor(anchorEl, fromIdx) {
+    // Close any existing popover first
+    document.querySelectorAll(".serial-editor").forEach(el => el.remove());
+
+    const total = exerciseIds.length;
+    const popover = document.createElement("div");
+    popover.className = "serial-editor";
+    popover.innerHTML = `
+      <div class="serial-editor-label">Move to position (1–${total})</div>
+      <div class="serial-editor-row">
+        <input type="number" class="input serial-editor-input" min="1" max="${total}" value="${fromIdx + 1}" inputmode="numeric" />
+        <button class="btn btn-primary btn-small serial-editor-go">Move</button>
+      </div>
+      <div class="serial-editor-quick">
+        <button class="btn btn-ghost btn-xs" data-target="top" ${fromIdx === 0 ? "disabled" : ""}>⤒ Top</button>
+        <button class="btn btn-ghost btn-xs" data-target="up" ${fromIdx === 0 ? "disabled" : ""}>▲ Up</button>
+        <button class="btn btn-ghost btn-xs" data-target="down" ${fromIdx === total - 1 ? "disabled" : ""}>▼ Down</button>
+        <button class="btn btn-ghost btn-xs" data-target="bottom" ${fromIdx === total - 1 ? "disabled" : ""}>⤓ Bottom</button>
+      </div>
+    `;
+    // Position it right below the tapped serial
+    document.body.appendChild(popover);
+    const rect = anchorEl.getBoundingClientRect();
+    const popW = 240;
+    let left = window.scrollX + rect.left;
+    if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+    if (left < 8) left = 8;
+    popover.style.left = left + "px";
+    popover.style.top = (window.scrollY + rect.bottom + 6) + "px";
+
+    const input = popover.querySelector(".serial-editor-input");
+    input.focus();
+    input.select();
+
+    function close() {
+      popover.remove();
+      document.removeEventListener("click", onDocClick, true);
+    }
+    function onDocClick(e) {
+      if (!popover.contains(e.target) && e.target !== anchorEl) close();
+    }
+    // Delay a tick so THIS click doesn't immediately close the popover
+    setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
+
+    function moveTo(toIdx) {
+      toIdx = Math.max(0, Math.min(total - 1, toIdx));
+      if (toIdx === fromIdx) { close(); return; }
+      const [item] = exerciseIds.splice(fromIdx, 1);
+      exerciseIds.splice(toIdx, 0, item);
+      saveDayPlan();
+      close();
+      renderPlanList();
+    }
+
+    popover.querySelector(".serial-editor-go").addEventListener("click", () => {
+      const val = parseInt(input.value, 10);
+      if (!isNaN(val) && val >= 1 && val <= total) moveTo(val - 1);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const val = parseInt(input.value, 10);
+        if (!isNaN(val) && val >= 1 && val <= total) moveTo(val - 1);
+      } else if (e.key === "Escape") {
+        close();
+      }
+    });
+    popover.querySelectorAll("[data-target]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const t = btn.dataset.target;
+        if (t === "top") moveTo(0);
+        else if (t === "bottom") moveTo(total - 1);
+        else if (t === "up") moveTo(fromIdx - 1);
+        else if (t === "down") moveTo(fromIdx + 1);
       });
     });
   }
