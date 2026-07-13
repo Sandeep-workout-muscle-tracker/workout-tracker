@@ -9,8 +9,8 @@ const MUSCLE_GROUPS = {
   legs:      { label: "Legs",      subs: ["quads", "hamstrings", "glutes", "calves", "adductors"] },
   core:      { label: "Core",      subs: ["abs_upper", "abs_lower", "obliques"] },
   cardio:    { label: "Cardio",    subs: ["running", "cycling", "rowing", "elliptical", "swimming", "hiit", "jump_rope", "stair_climber"] },
-  warmup:    { label: "Warmup",    subs: ["warmup_dynamic", "warmup_mobility", "warmup_activation"] },
-  cooldown:  { label: "Cooldown",  subs: ["cooldown_stretch", "cooldown_foam_roll", "cooldown_breathing"] },
+  warmup:    { label: "Warmup",    subs: ["warmup_chest", "warmup_back", "warmup_shoulders", "warmup_arms", "warmup_legs", "warmup_core", "warmup_full_body"] },
+  cooldown:  { label: "Cooldown",  subs: ["cooldown_chest", "cooldown_back", "cooldown_shoulders", "cooldown_arms", "cooldown_legs", "cooldown_core", "cooldown_full_body"] },
 };
 
 const SUBMUSCLE_LABELS = {
@@ -22,8 +22,10 @@ const SUBMUSCLE_LABELS = {
   abs_upper: "Upper Abs", abs_lower: "Lower Abs", obliques: "Obliques",
   running: "Running / Treadmill", cycling: "Cycling / Bike", rowing: "Rowing", elliptical: "Elliptical",
   swimming: "Swimming", hiit: "HIIT / Circuits", jump_rope: "Jump Rope", stair_climber: "Stair Climber",
-  warmup_dynamic: "Dynamic Stretches", warmup_mobility: "Mobility", warmup_activation: "Activation Drills",
-  cooldown_stretch: "Static Stretches", cooldown_foam_roll: "Foam Rolling", cooldown_breathing: "Breathing",
+  warmup_chest: "Chest Warmup", warmup_back: "Back Warmup", warmup_shoulders: "Shoulders Warmup",
+  warmup_arms: "Arms Warmup", warmup_legs: "Legs Warmup", warmup_core: "Core Warmup", warmup_full_body: "Full Body Warmup",
+  cooldown_chest: "Chest Cooldown", cooldown_back: "Back Cooldown", cooldown_shoulders: "Shoulders Cooldown",
+  cooldown_arms: "Arms Cooldown", cooldown_legs: "Legs Cooldown", cooldown_core: "Core Cooldown", cooldown_full_body: "Full Body Cooldown",
 };
 
 const EQUIP_LABELS = {
@@ -267,50 +269,92 @@ const SEED_EXERCISES = [
   // ---- CARDIO: STAIR CLIMBER ----
   ex("stair_climber", "Stair Climber", "stair_climber", "cardio_machine", "Steady climbing on a stepmill. Don't lean on the handles.", []),
 
-  // ---- WARMUP: DYNAMIC ----
-  ex("arm_circles", "Arm Circles", "warmup_dynamic", "bodyweight", "Small to large circles, forwards then backwards. 10 each direction.", []),
-  ex("leg_swings", "Leg Swings", "warmup_dynamic", "bodyweight", "Hold something for balance, swing one leg front-back, then side-side. 10 each.", []),
-  ex("hip_circles", "Hip Circles", "warmup_dynamic", "bodyweight", "Hands on hips, make wide circles with your pelvis. 10 each direction.", []),
-  ex("torso_twists", "Torso Twists", "warmup_dynamic", "bodyweight", "Feet planted, rotate the upper body left and right with relaxed arms.", []),
-  ex("high_knees", "High Knees", "warmup_dynamic", "bodyweight", "Jog in place driving knees to hip height. 30-60s.", []),
-  ex("jumping_jacks", "Jumping Jacks", "warmup_dynamic", "bodyweight", "Classic. 30-60s to raise heart rate.", []),
+  // ==================== WARMUP ====================
+  // ---- WARMUP: CHEST ----
+  ex("wall_pushups_warmup", "Wall Push-Ups", "warmup_chest", "bodyweight", "Feet a step from wall, push against it and control down. 10-15 reps to warm the chest and shoulders.", []),
+  ex("chest_openers", "Chest Openers", "warmup_chest", "bodyweight", "Sweep arms wide and back, opening the chest and shoulders. 10 slow reps.", []),
+  ex("band_chest_pulls", "Band Chest Pulls", "warmup_chest", "band", "Band behind back, hold ends. Squeeze the chest to bring hands together in front.", []),
 
-  // ---- WARMUP: MOBILITY ----
-  ex("cat_cow", "Cat-Cow", "warmup_mobility", "mat", "On all fours, alternate arching and rounding the spine. 8-10 reps.", []),
-  ex("worlds_greatest_stretch", "World's Greatest Stretch", "warmup_mobility", "mat", "Lunge, hand inside foot, twist and reach up. 5 each side.", []),
-  ex("thoracic_rotations", "Thoracic Rotations", "warmup_mobility", "mat", "Quadruped, hand behind head, rotate elbow up toward ceiling. 8 each side.", []),
-  ex("hip_openers", "90/90 Hip Openers", "warmup_mobility", "mat", "Seated, both knees at 90°, rotate side to side.", []),
-  ex("shoulder_dislocates", "Shoulder Dislocates", "warmup_mobility", "band", "Wide grip on band, pass overhead front to back. 10-15 reps.", []),
+  // ---- WARMUP: BACK ----
+  ex("cat_cow", "Cat-Cow", "warmup_back", "mat", "On all fours, alternate arching and rounding the spine. 8-10 reps.", []),
+  ex("thoracic_rotations", "Thoracic Rotations", "warmup_back", "mat", "Quadruped, hand behind head, rotate elbow up toward ceiling. 8 each side.", []),
+  ex("band_pull_aparts", "Band Pull-Aparts", "warmup_back", "band", "Band at chest height, pull apart to activate rear delts and mid-back. 15-20 reps.", []),
+  ex("scap_pulls", "Scapular Pulls", "warmup_back", "bodyweight", "Hang from a bar, retract shoulder blades without bending elbows. 5-8 slow reps.", []),
 
-  // ---- WARMUP: ACTIVATION ----
-  ex("band_pull_aparts", "Band Pull-Aparts", "warmup_activation", "band", "Band at chest height, pull apart to activate rear delts. 15-20 reps.", []),
-  ex("glute_bridges", "Glute Bridges", "warmup_activation", "bodyweight", "Lie on back, squeeze glutes to lift hips. 10-15 reps.", []),
-  ex("scap_pushups", "Scapular Push-Ups", "warmup_activation", "bodyweight", "Plank position, only move the shoulder blades up and down. 10 reps.", []),
-  ex("empty_bar_sets", "Empty Bar Warmup Sets", "warmup_activation", "barbell", "Rehearse today's main lift with just the bar. 1-2 sets of 8-10.", []),
-  ex("bird_dogs", "Bird Dogs", "warmup_activation", "bodyweight", "On all fours, extend opposite arm and leg. 8-10 each side.", []),
-  ex("dead_bugs", "Dead Bugs", "warmup_activation", "bodyweight", "On back, arms up. Lower opposite arm and leg while bracing core. 8 each.", []),
+  // ---- WARMUP: SHOULDERS ----
+  ex("arm_circles", "Arm Circles", "warmup_shoulders", "bodyweight", "Small to large circles, forwards then backwards. 10 each direction.", []),
+  ex("shoulder_dislocates", "Shoulder Dislocates", "warmup_shoulders", "band", "Wide grip on band, pass overhead front to back. 10-15 reps.", []),
+  ex("scap_pushups", "Scapular Push-Ups", "warmup_shoulders", "bodyweight", "Plank position, only move the shoulder blades up and down. 10 reps.", []),
+  ex("wall_slides", "Wall Slides", "warmup_shoulders", "bodyweight", "Back to wall, arms in 90° position, slide up and down. 10 controlled reps.", []),
 
-  // ---- COOLDOWN: STATIC STRETCH ----
-  ex("chest_doorway", "Chest Doorway Stretch", "cooldown_stretch", "bodyweight", "Forearm on door frame, step through. Hold 30s each side.", []),
-  ex("hamstring_stretch", "Hamstring Stretch", "cooldown_stretch", "mat", "Seated forward fold or single-leg version. Hold 30s each side.", []),
-  ex("quad_stretch", "Standing Quad Stretch", "cooldown_stretch", "bodyweight", "Grab one ankle, pull heel to glute. Hold 30s each side.", []),
-  ex("childs_pose", "Child's Pose", "cooldown_stretch", "mat", "Kneel, sit back on heels, reach forward. Hold 30-60s.", []),
-  ex("cobra_stretch", "Cobra Stretch", "cooldown_stretch", "mat", "Prone, press up through hands to arch back. Hold 20-30s.", []),
-  ex("pigeon_pose", "Pigeon Pose", "cooldown_stretch", "mat", "One shin forward across mat, other leg back. Deep hip stretch. 30-60s each.", []),
-  ex("figure_four", "Figure-Four Stretch", "cooldown_stretch", "mat", "Lying on back, ankle over opposite knee, pull thigh toward chest. 30s each.", []),
-  ex("triceps_overhead", "Triceps Overhead Stretch", "cooldown_stretch", "bodyweight", "Reach one arm overhead and behind the head. Pull elbow gently. 20s each.", []),
+  // ---- WARMUP: ARMS ----
+  ex("wrist_circles", "Wrist Circles", "warmup_arms", "bodyweight", "Small circles each direction, 10-15 each way. Great before pressing or curling.", []),
+  ex("elbow_circles", "Elbow Circles", "warmup_arms", "bodyweight", "Small circles at the elbow joints, 10 each direction.", []),
+  ex("light_curl_warmup", "Light Curl Warmup", "warmup_arms", "dumbbell", "1-2 sets of 15 with the empty bar or light dumbbells to prime biceps and forearms.", []),
 
-  // ---- COOLDOWN: FOAM ROLL ----
-  ex("foam_it_band", "Foam Roll - IT Band", "cooldown_foam_roll", "foam_roller", "Side lying, roll from hip to just above the knee. 30-60s each side.", []),
-  ex("foam_quads", "Foam Roll - Quads", "cooldown_foam_roll", "foam_roller", "Prone on the roller, roll from hip to just above the knee.", []),
-  ex("foam_upper_back", "Foam Roll - Upper Back", "cooldown_foam_roll", "foam_roller", "Roller under upper back, arms crossed. Roll from mid-back to shoulders.", []),
-  ex("foam_calves", "Foam Roll - Calves", "cooldown_foam_roll", "foam_roller", "Seated, roller under calves. Cross one leg over the other for pressure.", []),
-  ex("foam_glutes", "Foam Roll - Glutes", "cooldown_foam_roll", "foam_roller", "Seated on roller, cross one ankle over knee, lean into that side.", []),
+  // ---- WARMUP: LEGS ----
+  ex("leg_swings", "Leg Swings", "warmup_legs", "bodyweight", "Hold something for balance, swing one leg front-back, then side-side. 10 each.", []),
+  ex("hip_circles", "Hip Circles", "warmup_legs", "bodyweight", "Hands on hips, make wide circles with your pelvis. 10 each direction.", []),
+  ex("hip_openers", "90/90 Hip Openers", "warmup_legs", "mat", "Seated, both knees at 90°, rotate side to side.", []),
+  ex("glute_bridges", "Glute Bridges", "warmup_legs", "bodyweight", "Lie on back, squeeze glutes to lift hips. 10-15 reps.", []),
+  ex("bodyweight_squats_warmup", "Bodyweight Squat Warmup", "warmup_legs", "bodyweight", "10-15 controlled bodyweight squats to prime hips and knees.", []),
 
-  // ---- COOLDOWN: BREATHING ----
-  ex("box_breathing", "Box Breathing", "cooldown_breathing", "bodyweight", "4s in, 4s hold, 4s out, 4s hold. 5-10 rounds. Calms the nervous system.", []),
-  ex("diaphragmatic", "Diaphragmatic Breathing", "cooldown_breathing", "mat", "Lie down, one hand on belly. Slow nasal breaths, belly rises first. 5 min.", []),
-  ex("478_breathing", "4-7-8 Breathing", "cooldown_breathing", "bodyweight", "Inhale 4s, hold 7s, exhale 8s. 4-6 rounds. Great before sleep.", []),
+  // ---- WARMUP: CORE ----
+  ex("torso_twists", "Torso Twists", "warmup_core", "bodyweight", "Feet planted, rotate the upper body left and right with relaxed arms.", []),
+  ex("bird_dogs", "Bird Dogs", "warmup_core", "bodyweight", "On all fours, extend opposite arm and leg. 8-10 each side.", []),
+  ex("dead_bugs", "Dead Bugs", "warmup_core", "bodyweight", "On back, arms up. Lower opposite arm and leg while bracing core. 8 each.", []),
+  ex("plank_hold_warmup", "Plank Warmup Hold", "warmup_core", "bodyweight", "30s hold to activate the core before lifting.", []),
+
+  // ---- WARMUP: FULL BODY ----
+  ex("high_knees", "High Knees", "warmup_full_body", "bodyweight", "Jog in place driving knees to hip height. 30-60s.", []),
+  ex("jumping_jacks", "Jumping Jacks", "warmup_full_body", "bodyweight", "Classic. 30-60s to raise heart rate.", []),
+  ex("worlds_greatest_stretch", "World's Greatest Stretch", "warmup_full_body", "mat", "Lunge, hand inside foot, twist and reach up. 5 each side.", []),
+  ex("empty_bar_sets", "Empty Bar Warmup Sets", "warmup_full_body", "barbell", "Rehearse today's main lift with just the bar. 1-2 sets of 8-10.", []),
+  ex("butt_kickers", "Butt Kickers", "warmup_full_body", "bodyweight", "Jog in place kicking heels to glutes. 30-60s to raise heart rate.", []),
+
+  // ==================== COOLDOWN ====================
+  // ---- COOLDOWN: CHEST ----
+  ex("chest_doorway", "Chest Doorway Stretch", "cooldown_chest", "bodyweight", "Forearm on door frame, step through. Hold 30s each side.", []),
+  ex("chest_wall_corner", "Chest Wall Corner Stretch", "cooldown_chest", "bodyweight", "Face into a corner, hands on walls at shoulder height, lean in gently. Hold 30s.", []),
+  ex("lying_chest_stretch", "Lying Chest Stretch", "cooldown_chest", "mat", "Lying on back, arms out in T-shape, palms up. Feel the chest open. Hold 30s.", []),
+
+  // ---- COOLDOWN: BACK ----
+  ex("cobra_stretch", "Cobra Stretch", "cooldown_back", "mat", "Prone, press up through hands to arch back. Hold 20-30s.", []),
+  ex("foam_upper_back", "Foam Roll - Upper Back", "cooldown_back", "foam_roller", "Roller under upper back, arms crossed. Roll from mid-back to shoulders.", []),
+  ex("childs_pose_reach", "Child's Pose w/ Reach", "cooldown_back", "mat", "Kneeling child's pose, walk hands to one side to stretch the lat. 30s each.", []),
+  ex("knee_to_chest", "Knee-to-Chest Stretch", "cooldown_back", "mat", "Lying on back, pull one knee toward chest. Great for lower back. 30s each.", []),
+
+  // ---- COOLDOWN: SHOULDERS ----
+  ex("cross_body_shoulder", "Cross-Body Shoulder Stretch", "cooldown_shoulders", "bodyweight", "Pull one arm across the chest with the other hand. Hold 30s each side.", []),
+  ex("sleeper_stretch", "Sleeper Stretch", "cooldown_shoulders", "mat", "Lying on side, arm at 90°, gently press forearm toward floor. Rotator cuff stretch.", []),
+  ex("shoulder_rolls", "Slow Shoulder Rolls", "cooldown_shoulders", "bodyweight", "Big controlled rolls, forward then back, 10 each direction.", []),
+
+  // ---- COOLDOWN: ARMS ----
+  ex("triceps_overhead", "Triceps Overhead Stretch", "cooldown_arms", "bodyweight", "Reach one arm overhead and behind the head. Pull elbow gently. 20-30s each.", []),
+  ex("biceps_wall_stretch", "Biceps Wall Stretch", "cooldown_arms", "bodyweight", "Arm behind you at shoulder height, palm on wall, turn body away. 30s each side.", []),
+  ex("wrist_flexor_stretch", "Wrist Flexor Stretch", "cooldown_arms", "bodyweight", "Arm out, palm up. Pull fingers down and back with other hand. 30s each.", []),
+
+  // ---- COOLDOWN: LEGS ----
+  ex("hamstring_stretch", "Hamstring Stretch", "cooldown_legs", "mat", "Seated forward fold or single-leg version. Hold 30s each side.", []),
+  ex("quad_stretch", "Standing Quad Stretch", "cooldown_legs", "bodyweight", "Grab one ankle, pull heel to glute. Hold 30s each side.", []),
+  ex("pigeon_pose", "Pigeon Pose", "cooldown_legs", "mat", "One shin forward across mat, other leg back. Deep hip stretch. 30-60s each.", []),
+  ex("figure_four", "Figure-Four Stretch", "cooldown_legs", "mat", "Lying on back, ankle over opposite knee, pull thigh toward chest. 30s each.", []),
+  ex("foam_it_band", "Foam Roll - IT Band", "cooldown_legs", "foam_roller", "Side lying, roll from hip to just above the knee. 30-60s each side.", []),
+  ex("foam_quads", "Foam Roll - Quads", "cooldown_legs", "foam_roller", "Prone on the roller, roll from hip to just above the knee.", []),
+  ex("foam_calves", "Foam Roll - Calves", "cooldown_legs", "foam_roller", "Seated, roller under calves. Cross one leg over the other for pressure.", []),
+  ex("foam_glutes", "Foam Roll - Glutes", "cooldown_legs", "foam_roller", "Seated on roller, cross one ankle over knee, lean into that side.", []),
+  ex("calf_wall_stretch", "Calf Wall Stretch", "cooldown_legs", "bodyweight", "Hands on wall, one leg back straight with heel down. Hold 30s each side.", []),
+
+  // ---- COOLDOWN: CORE ----
+  ex("seated_twist_stretch", "Seated Twist Stretch", "cooldown_core", "mat", "Seated with legs out, cross one over, twist toward the crossed leg. 30s each.", []),
+  ex("side_bend_stretch", "Standing Side Bend Stretch", "cooldown_core", "bodyweight", "Arm overhead, lean sideways. Stretches obliques. 30s each side.", []),
+  ex("cat_cow_slow", "Slow Cat-Cow", "cooldown_core", "mat", "Slower version for cooldown, focus on deep breathing. 8-10 slow rounds.", []),
+
+  // ---- COOLDOWN: FULL BODY ----
+  ex("childs_pose", "Child's Pose", "cooldown_full_body", "mat", "Kneel, sit back on heels, reach forward. Hold 30-60s.", []),
+  ex("box_breathing", "Box Breathing", "cooldown_full_body", "bodyweight", "4s in, 4s hold, 4s out, 4s hold. 5-10 rounds. Calms the nervous system.", []),
+  ex("diaphragmatic", "Diaphragmatic Breathing", "cooldown_full_body", "mat", "Lie down, one hand on belly. Slow nasal breaths, belly rises first. 5 min.", []),
+  ex("478_breathing", "4-7-8 Breathing", "cooldown_full_body", "bodyweight", "Inhale 4s, hold 7s, exhale 8s. 4-6 rounds. Great before sleep.", []),
 ];
 
 // Convenience lookup — populated dynamically via library.js so user overrides are respected.
