@@ -761,6 +761,46 @@ a { color: inherit; }
 }
 .day-panel-divider { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
 .plan-ex-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+
+/* Plan sections: Warmup / Main / Cooldown, each with its own numbering */
+.plan-section {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.015);
+  margin-bottom: 10px;
+}
+.plan-section:last-child { margin-bottom: 0; }
+.plan-section-header {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--line-bright);
+  font-weight: 600;
+}
+.plan-section-label { color: var(--text-muted); }
+.plan-section-count {
+  background: var(--bg-4); color: var(--accent);
+  padding: 1px 8px; border-radius: 10px; font-size: 10px;
+}
+/* Section accent colors */
+.plan-section-warmup   { border-color: rgba(96,165,250,0.25); background: rgba(96,165,250,0.03); }
+.plan-section-warmup .plan-section-label { color: var(--info); }
+.plan-section-warmup .plan-section-count { color: var(--info); background: var(--info-soft); }
+
+.plan-section-main { border-color: rgba(255,107,61,0.22); background: rgba(255,107,61,0.03); }
+.plan-section-main .plan-section-label { color: var(--accent); }
+.plan-section-main .plan-section-count { color: var(--accent); background: var(--accent-soft); }
+
+.plan-section-cooldown { border-color: rgba(74,222,128,0.22); background: rgba(74,222,128,0.03); }
+.plan-section-cooldown .plan-section-label { color: var(--good); }
+.plan-section-cooldown .plan-section-count { color: var(--good); background: var(--good-soft); }
 .plan-ex-chip {
   background: var(--bg-3);
   border: 1px solid var(--line-bright);
