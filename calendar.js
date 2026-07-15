@@ -21,7 +21,18 @@ function renderCalendar(container) {
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const monthLabel = calCursor.toLocaleString("default", { month: "long", year: "numeric" });
 
+  const swapBanner = daySwapSourceDate ? `
+    <div class="swap-banner">
+      <div class="swap-banner-text">
+        <span class="swap-banner-icon">↔</span>
+        <span>Pick a target day to swap or move <b>${formatFriendlyDate(daySwapSourceDate)}</b> to. (Can be in another month.)</span>
+      </div>
+      <button class="btn btn-ghost btn-small" id="swap-cancel">Cancel</button>
+    </div>
+  ` : "";
+
   container.innerHTML = `
+    ${swapBanner}
     <div class="cal-header">
       <button class="btn btn-ghost" id="cal-prev">‹ Prev</button>
       <div class="cal-month-label">${monthLabel}</div>
@@ -35,7 +46,7 @@ function renderCalendar(container) {
     <div class="cal-grid cal-grid-dow" style="margin-top: 12px;">
       ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => `<div class="cal-dow">${d}</div>`).join("")}
     </div>
-    <div class="cal-grid" id="cal-cells-grid"></div>
+    <div class="cal-grid ${daySwapSourceDate ? "cal-grid-swap-mode" : ""}" id="cal-cells-grid"></div>
     <div id="cal-day-panel"></div>
     <div id="cal-log-modal-slot"></div>
   `;
@@ -50,6 +61,8 @@ function renderCalendar(container) {
     calCursor = new Date(y, m + 1, 1);
     renderCalendar(container);
   });
+  const swapCancelBtn = container.querySelector("#swap-cancel");
+  if (swapCancelBtn) swapCancelBtn.addEventListener("click", () => exitSwapMode(container));
 }
 
 // Paint (or repaint) just the day cells — leaves the day panel intact.
@@ -58,6 +71,7 @@ function paintCells(container, y, m, startDow, daysInMonth) {
   if (!grid) return;
   const data = getData();
   const today = todayStr();
+  const inSwap = !!daySwapSourceDate;
 
   let cells = "";
   for (let i = 0; i < startDow; i++) cells += `<div class="cal-cell cal-empty"></div>`;
@@ -72,6 +86,7 @@ function paintCells(container, y, m, startDow, daysInMonth) {
     if (dateStr === today) cellClass += " cal-today";
     if (hasLogs) cellClass += " cal-logged";
     else if (hasPlan) cellClass += " cal-planned";
+    if (inSwap && dateStr === daySwapSourceDate) cellClass += " cal-swap-source";
 
     cells += `
       <div class="${cellClass}" data-date="${dateStr}">
@@ -83,7 +98,19 @@ function paintCells(container, y, m, startDow, daysInMonth) {
   grid.innerHTML = cells;
 
   grid.querySelectorAll(".cal-cell[data-date]").forEach(cell => {
-    cell.addEventListener("click", () => renderDayPanel(container, cell.dataset.date));
+    cell.addEventListener("click", () => {
+      const clicked = cell.dataset.date;
+      if (daySwapSourceDate) {
+        if (clicked === daySwapSourceDate) {
+          // Tapping the source day cancels swap mode
+          exitSwapMode(container);
+        } else {
+          openSwapConfirm(container, daySwapSourceDate, clicked);
+        }
+      } else {
+        renderDayPanel(container, clicked);
+      }
+    });
   });
 }
 
@@ -133,7 +160,8 @@ function renderDayPanel(container, dateStr) {
 
       <div id="day-existing-logs"></div>
 
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px;">
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px; flex-wrap: wrap;">
+        <button class="btn btn-ghost btn-small" id="swap-day" title="Move or swap this day's workouts with another day">↔ Move / Swap this day</button>
         <button class="btn btn-danger btn-small" id="clear-plan">Clear day</button>
       </div>
     </div>
@@ -292,12 +320,22 @@ function renderDayPanel(container, dateStr) {
     });
     list.querySelectorAll(".log-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        renderLogForm(modalSlot, btn.dataset.id, () => {
+        const targetId = btn.dataset.id;
+        const openDrawer = () => renderLogForm(modalSlot, targetId, () => {
           modalSlot.innerHTML = "";
           renderExistingLogs();
           renderPlanList();
           refreshMonthCells(container);
         }, dateStr);
+
+        // If timers are already running for OTHER exercises (user hit Back earlier),
+        // ask what to do before starting a new one.
+        const others = listActiveExTimers().filter(t => t.exerciseId !== targetId);
+        if (others.length > 0 && !hasExTimer(targetId)) {
+          openTimerConflictPrompt(others, targetId, openDrawer);
+          return;
+        }
+        openDrawer();
       });
     });
 
@@ -308,8 +346,8 @@ function renderDayPanel(container, dateStr) {
       if (!list.isConnected) return;
       list.querySelectorAll("[data-ex-timer]").forEach(span => {
         const exId = span.dataset.exTimer;
-        if (activeExTimer && activeExTimer.exerciseId === exId && activeExTimer.dateStr === dateStr) {
-          span.textContent = `⏱ ${fmtDuration(activeExTimerSeconds())}`;
+        if (hasExTimer(exId)) {
+          span.textContent = `⏱ ${fmtDuration(getExTimerSeconds(exId))}`;
           span.classList.add("running");
         } else {
           span.classList.remove("running");
@@ -504,9 +542,200 @@ function renderDayPanel(container, dateStr) {
     refreshMonthCells(container);
   });
 
+  panel.querySelector("#swap-day").addEventListener("click", () => {
+    enterSwapMode(container, dateStr);
+  });
+
   renderPlanList();
   renderBrowseSections();
   renderExistingLogs();
+}
+
+// -------- Small centered modal helper (used for confirms/prompts) --------
+function openModal({ title, body, actions }) {
+  const wrap = document.createElement("div");
+  wrap.className = "app-modal-backdrop";
+  wrap.innerHTML = `
+    <div class="app-modal" role="dialog" aria-modal="true">
+      <div class="app-modal-title">${title}</div>
+      <div class="app-modal-body">${body}</div>
+      <div class="app-modal-actions"></div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const actionsEl = wrap.querySelector(".app-modal-actions");
+  const closeFn = () => wrap.remove();
+  (actions || []).forEach(a => {
+    const btn = document.createElement("button");
+    btn.className = "btn " + (a.className || "btn-ghost");
+    btn.textContent = a.label;
+    btn.addEventListener("click", () => {
+      if (a.onClick) a.onClick(closeFn);
+      else closeFn();
+    });
+    actionsEl.appendChild(btn);
+  });
+  // Click backdrop (not modal content) to close
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) closeFn(); });
+  return closeFn;
+}
+
+// -------- Timer conflict prompt --------
+function openTimerConflictPrompt(otherTimers, targetExerciseId, proceedFn) {
+  const others = otherTimers.map(t => {
+    const nm = typeof exerciseName === "function" ? exerciseName(t.exerciseId) : t.exerciseId;
+    return `<div class="timer-conflict-row"><span>${escapeAttr(nm)}</span><span class="mono">${fmtDuration(t.seconds)}</span></div>`;
+  }).join("");
+  const targetName = exerciseName(targetExerciseId);
+
+  openModal({
+    title: "Another timer is running",
+    body: `
+      <div class="timer-conflict-list">${others}</div>
+      <p>Starting timer for <b>${escapeAttr(targetName)}</b>. What should we do with the other timer(s)?</p>
+    `,
+    actions: [
+      {
+        label: "Run all in parallel",
+        className: "btn-primary",
+        onClick: (close) => { close(); proceedFn(); },
+      },
+      {
+        label: "Discard other(s)",
+        onClick: (close) => {
+          otherTimers.forEach(t => stopExTimer(t.exerciseId));
+          close();
+          proceedFn();
+        },
+      },
+      { label: "Cancel" },
+    ],
+  });
+}
+
+// -------- IST time formatter (Asia/Kolkata, UTC+5:30) --------
+function fmtIST(ts) {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).format(new Date(ts));
+  } catch (e) {
+    // Fallback for very old browsers: manually compute IST offset (+5:30)
+    const d = new Date(ts + 5.5 * 3600 * 1000);
+    return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+  }
+}
+
+// -------- Day swap / move --------
+// When user taps "Move / Swap this day", we enter swap-mode: banner appears on
+// the calendar, all cells become pickable, and tapping a target opens a
+// confirmation with Swap / Move options.
+let daySwapSourceDate = null;
+
+function enterSwapMode(container, srcDate) {
+  daySwapSourceDate = srcDate;
+  renderCalendar(container);
+}
+function exitSwapMode(container) {
+  daySwapSourceDate = null;
+  renderCalendar(container);
+}
+
+function _dayCounts(data, dateStr) {
+  const planned = (data.plans[dateStr]?.exerciseIds || []).length;
+  const logged = data.logs.filter(l => l.date === dateStr).length;
+  return { planned, logged };
+}
+
+function _dayIsEmpty(data, dateStr) {
+  const c = _dayCounts(data, dateStr);
+  return c.planned === 0 && c.logged === 0 && !data.plans[dateStr] && !(data.stopwatch && data.stopwatch[dateStr]);
+}
+
+function openSwapConfirm(container, srcDate, dstDate) {
+  const data = getData();
+  const src = _dayCounts(data, srcDate);
+  const dst = _dayCounts(data, dstDate);
+  const dstEmpty = _dayIsEmpty(data, dstDate);
+  const srcLabel = formatFriendlyDate(srcDate);
+  const dstLabel = formatFriendlyDate(dstDate);
+
+  openModal({
+    title: `Move or swap`,
+    body: `
+      <div class="swap-summary">
+        <div><b>${srcLabel}</b><span>${src.planned} planned · ${src.logged} logged</span></div>
+        <div class="swap-arrow">↔</div>
+        <div><b>${dstLabel}</b><span>${dst.planned} planned · ${dst.logged} logged</span></div>
+      </div>
+      <p class="swap-hint">
+        <b>Swap</b> exchanges both days' contents.
+        <b>Move</b> ${dstEmpty ? "moves the source to the target." : `<span class="warn">overwrites ${dstLabel} with ${srcLabel}'s contents.</span>`}
+      </p>
+    `,
+    actions: [
+      {
+        label: "↔ Swap",
+        className: "btn-primary",
+        onClick: (close) => {
+          swapDays(srcDate, dstDate);
+          close();
+          exitSwapMode(container);
+        },
+      },
+      {
+        label: "→ Move" + (dstEmpty ? "" : " (overwrite)"),
+        className: dstEmpty ? "" : "btn-danger",
+        onClick: (close) => {
+          moveDay(srcDate, dstDate);
+          close();
+          exitSwapMode(container);
+        },
+      },
+      { label: "Cancel" },
+    ],
+  });
+}
+
+function swapDays(srcDate, dstDate) {
+  save(data => {
+    // Swap plans
+    const srcPlan = data.plans[srcDate];
+    const dstPlan = data.plans[dstDate];
+    if (dstPlan) data.plans[srcDate] = dstPlan; else delete data.plans[srcDate];
+    if (srcPlan) data.plans[dstDate] = srcPlan; else delete data.plans[dstDate];
+    // Swap log dates (do it in two passes with a temp marker to avoid double-hit)
+    const TEMP = "__swap_tmp__";
+    data.logs.forEach(l => { if (l.date === srcDate) l.date = TEMP; });
+    data.logs.forEach(l => { if (l.date === dstDate) l.date = srcDate; });
+    data.logs.forEach(l => { if (l.date === TEMP) l.date = dstDate; });
+    // Swap stopwatch
+    if (data.stopwatch) {
+      const s = data.stopwatch[srcDate];
+      const d = data.stopwatch[dstDate];
+      if (d) data.stopwatch[srcDate] = d; else delete data.stopwatch[srcDate];
+      if (s) data.stopwatch[dstDate] = s; else delete data.stopwatch[dstDate];
+    }
+  });
+}
+
+function moveDay(srcDate, dstDate) {
+  save(data => {
+    // Plans: overwrite dst with src, clear src
+    if (data.plans[srcDate]) data.plans[dstDate] = data.plans[srcDate];
+    else delete data.plans[dstDate];
+    delete data.plans[srcDate];
+    // Logs: remove dst's logs, then relabel src logs to dst
+    data.logs = data.logs.filter(l => l.date !== dstDate);
+    data.logs.forEach(l => { if (l.date === srcDate) l.date = dstDate; });
+    // Stopwatch
+    if (data.stopwatch) {
+      if (data.stopwatch[srcDate]) data.stopwatch[dstDate] = data.stopwatch[srcDate];
+      else delete data.stopwatch[dstDate];
+      delete data.stopwatch[srcDate];
+    }
+  });
 }
 
 // -------- Stopwatch --------
@@ -533,10 +762,20 @@ function renderStopwatch(container, dateStr) {
     if (timeEl) timeEl.textContent = fmt(computeElapsed());
   }
 
+  // Wall-clock label showing IST start / end times.
+  let clockLabel;
+  if (running) {
+    clockLabel = `Started <b>${fmtIST(sw.startedAt)}</b> IST`;
+  } else if (sw && sw.startedAt && sw.endedAt) {
+    clockLabel = `<b>${fmtIST(sw.startedAt)}</b> → <b>${fmtIST(sw.endedAt)}</b> IST`;
+  } else {
+    clockLabel = "Not started";
+  }
+
   container.innerHTML = `
     <div class="stopwatch-card">
       <div>
-        <div class="stopwatch-label">${running ? "Workout in progress" : (sw && sw.endedAt ? "Duration" : "Not started")}</div>
+        <div class="stopwatch-label">${clockLabel}</div>
         <div class="stopwatch-time ${running ? "running" : ""}">${fmt(computeElapsed())}</div>
       </div>
       <div class="stopwatch-actions">
