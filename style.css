@@ -690,6 +690,117 @@ a { color: inherit; }
 .cal-legend-item { display: flex; align-items: center; gap: 5px; }
 .cal-legend-dot { width: 9px; height: 9px; border-radius: 50%; }
 
+/* ---- Swap-mode banner + source-cell + pickable cells ---- */
+.swap-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: linear-gradient(90deg, var(--accent-soft), rgba(96,165,250,0.08));
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 20px var(--accent-glow);
+  animation: fade-in 0.15s ease;
+}
+.swap-banner-text {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+  flex-wrap: wrap;
+}
+.swap-banner-icon {
+  font-size: 20px; color: var(--accent);
+  animation: swap-pulse 1.4s ease-in-out infinite;
+}
+@keyframes swap-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.2); opacity: 0.7; }
+}
+.cal-grid-swap-mode .cal-cell[data-date]:not(.cal-empty) {
+  cursor: crosshair;
+}
+.cal-grid-swap-mode .cal-cell[data-date]:hover:not(.cal-swap-source) {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.cal-cell.cal-swap-source {
+  border-color: var(--accent) !important;
+  border-style: dashed !important;
+  border-width: 2px !important;
+  background: var(--accent-soft) !important;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+/* ---- Generic centered modal (used for confirms + timer conflicts + swap confirm) ---- */
+.app-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fade-in 0.15s ease;
+}
+.app-modal {
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.app-modal-title {
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 600;
+  margin-bottom: 12px;
+}
+.app-modal-body { font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; }
+.app-modal-body b { color: var(--text); }
+.app-modal-body p { margin: 10px 0 0; }
+.app-modal-actions {
+  display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;
+}
+
+/* Timer conflict list */
+.timer-conflict-list {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  margin-bottom: 10px;
+}
+.timer-conflict-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.timer-conflict-row:last-child { border-bottom: none; }
+.timer-conflict-row .mono { font-family: var(--font-mono); color: var(--accent); font-weight: 600; }
+
+/* Swap summary block */
+.swap-summary {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.swap-summary > div:first-child, .swap-summary > div:last-child {
+  flex: 1;
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 13px;
+}
+.swap-summary > div span:not(.swap-arrow) { color: var(--text-muted); font-size: 11.5px; font-family: var(--font-mono); }
+.swap-arrow {
+  font-size: 22px; color: var(--accent);
+  flex-shrink: 0;
+}
+.swap-hint { font-size: 12.5px; }
+.swap-hint .warn { color: var(--danger); font-weight: 600; }
+
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .cal-grid-dow { margin-bottom: 6px; }
 .cal-dow { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); text-align: center; text-transform: uppercase; letter-spacing: 0.08em; padding: 6px 0; }
