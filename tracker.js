@@ -2,12 +2,14 @@
 // (bottom sheet on mobile) that supports both creating and editing entries.
 
 // ---------- Per-exercise timer ----------
-// When user taps "Log sets" on an exercise, we start a stopwatch for it.
-// Timer state lives in memory only. Listeners tick every second so day-panel
-// chips can update in place without re-rendering the whole list.
-let activeExTimer = null;      // { exerciseId, dateStr, startedAt } | null
+// Multiple timers can run in parallel — one per exerciseId. When user taps
+// "Log sets" on an exercise, a stopwatch starts for it. Tapping "Back" in the
+// drawer LEAVES the timer running so they can log something else in parallel.
+// Only Save (records duration) or × Cancel (discards) stops a timer.
+// State lives in memory only; a full page refresh clears everything.
+const activeExTimers = new Map();  // exerciseId -> { startedAt, dateStr }
 let exTimerInterval = null;
-const exTimerListeners = [];   // fns called every tick
+const exTimerListeners = [];
 
 function onExTimerTick(fn) {
   exTimerListeners.push(fn);
@@ -17,25 +19,54 @@ function onExTimerTick(fn) {
   };
 }
 function _tickExTimer() { exTimerListeners.forEach(fn => { try { fn(); } catch (e) {} }); }
-
-function startExTimer(exerciseId, dateStr) {
-  activeExTimer = { exerciseId, dateStr: dateStr || todayStr(), startedAt: Date.now() };
-  if (exTimerInterval) clearInterval(exTimerInterval);
+function _ensureExTimerInterval() {
+  if (exTimerInterval || activeExTimers.size === 0) return;
   exTimerInterval = setInterval(_tickExTimer, 1000);
+}
+function _maybeStopExTimerInterval() {
+  if (activeExTimers.size === 0 && exTimerInterval) {
+    clearInterval(exTimerInterval);
+    exTimerInterval = null;
+  }
+}
+
+// Start a timer for `exerciseId`. If one is already running for that id,
+// this is a no-op (so re-opening the drawer for the same exercise doesn't reset).
+function startExTimer(exerciseId, dateStr) {
+  if (activeExTimers.has(exerciseId)) return;
+  activeExTimers.set(exerciseId, { startedAt: Date.now(), dateStr: dateStr || todayStr() });
+  _ensureExTimerInterval();
   _tickExTimer();
 }
-function stopExTimer() {
-  const t = activeExTimer;
-  activeExTimer = null;
-  if (exTimerInterval) { clearInterval(exTimerInterval); exTimerInterval = null; }
-  _tickExTimer();
+
+// Stop a specific timer and return its accumulated duration in seconds.
+// Returns 0 if there was no timer for that exerciseId.
+function stopExTimer(exerciseId) {
+  const t = activeExTimers.get(exerciseId);
   if (!t) return 0;
+  activeExTimers.delete(exerciseId);
+  _tickExTimer();
+  _maybeStopExTimerInterval();
   return Math.max(1, Math.round((Date.now() - t.startedAt) / 1000));
 }
-function activeExTimerSeconds() {
-  if (!activeExTimer) return 0;
-  return Math.max(0, Math.floor((Date.now() - activeExTimer.startedAt) / 1000));
+
+function hasExTimer(exerciseId) { return activeExTimers.has(exerciseId); }
+
+function getExTimerSeconds(exerciseId) {
+  const t = activeExTimers.get(exerciseId);
+  if (!t) return 0;
+  return Math.max(0, Math.floor((Date.now() - t.startedAt) / 1000));
 }
+
+// Returns an array of {exerciseId, dateStr, seconds} for all currently-running timers.
+function listActiveExTimers() {
+  const now = Date.now();
+  return Array.from(activeExTimers.entries()).map(([exerciseId, t]) => ({
+    exerciseId, dateStr: t.dateStr,
+    seconds: Math.max(0, Math.floor((now - t.startedAt) / 1000)),
+  }));
+}
+
 function fmtDuration(sec) {
   if (!sec || sec < 0) return "0:00";
   const h = Math.floor(sec / 3600);
@@ -89,7 +120,9 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   const initialSets = existing?.sets?.length ? existing.sets : [{ weight: "", reps: "" }, { weight: "", reps: "" }];
   const initialNote = existing?.note || "";
 
-  // Start a fresh per-exercise stopwatch on new-log open (edit mode preserves existing duration)
+  // Start a fresh per-exercise stopwatch on new-log open (edit mode preserves existing duration).
+  // If a timer is already running for this exercise (e.g. user hit Back earlier),
+  // don't restart — just show its accumulated time.
   if (!isEdit) {
     startExTimer(exerciseId, presetDate || todayStr());
   }
@@ -117,7 +150,7 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
       <textarea id="log-note" class="input log-note-area" rows="4" placeholder="Optional notes — how you felt, form cues, tempo, anything worth remembering">${initialNote}</textarea>
 
       <div class="log-drawer-actions">
-        <button class="btn btn-ghost" id="cancel-log-2">Cancel</button>
+        <button class="btn btn-ghost" id="back-log" title="Close drawer, keep the timer running">${isEdit ? "Cancel" : "← Back"}</button>
         <button class="btn btn-primary" id="save-log">${isEdit ? "Update" : "Save entry"}</button>
       </div>
     </div>
@@ -148,15 +181,21 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   }
   initialSets.forEach(s => addRow(s.weight, s.reps));
 
-  function close() {
-    // If drawer closes without Save, discard the timer for this exercise.
-    if (!isEdit) stopExTimer();
+  // Two ways to close the drawer:
+  //   1. Back / backdrop tap: leave the timer running so user can log something else
+  //      in parallel. They can reopen this exercise's drawer later and Save the accumulated time.
+  //   2. × (top right): fully cancel — stop the timer, discard the duration.
+  function backAndKeepTimer() { container.innerHTML = ""; if (onSaved) onSaved(); }
+  function fullCancel() {
+    if (!isEdit) stopExTimer(exerciseId);
     container.innerHTML = "";
+    if (onSaved) onSaved();
   }
+
   container.querySelector("#add-set-row").addEventListener("click", () => addRow());
-  container.querySelector("#cancel-log").addEventListener("click", close);
-  container.querySelector("#cancel-log-2").addEventListener("click", close);
-  container.querySelector("#log-backdrop").addEventListener("click", close);
+  container.querySelector("#cancel-log").addEventListener("click", fullCancel);
+  container.querySelector("#back-log").addEventListener("click", isEdit ? fullCancel : backAndKeepTimer);
+  container.querySelector("#log-backdrop").addEventListener("click", isEdit ? fullCancel : backAndKeepTimer);
 
   container.querySelector("#save-log").addEventListener("click", () => {
     const date = container.querySelector("#log-date").value || todayStr();
@@ -169,7 +208,7 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
     if (sets.length === 0) { alert("Add at least one set with a weight or rep count."); return; }
 
     // Snapshot & stop the exercise timer BEFORE we save so we can attach duration.
-    const durationSec = isEdit ? null : stopExTimer();
+    const durationSec = isEdit ? null : stopExTimer(exerciseId);
 
     if (isEdit) {
       save(data => {
@@ -184,16 +223,21 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
       });
     }
     container.innerHTML = "";
-    onSaved();
+    if (onSaved) onSaved();
   });
 
   // Tick the drawer timer readout every second while the drawer is open (new-log mode only).
+  // Seed the initial value from the running timer (which may already have been running
+  // from an earlier Back tap) so we don't flash 0:00 before the first tick.
   if (!isEdit) {
     const timerEl = container.querySelector("#log-drawer-timer");
-    const unsubscribe = onExTimerTick(() => {
-      if (!timerEl.isConnected) { unsubscribe(); return; }
-      timerEl.textContent = `⏱ ${fmtDuration(activeExTimerSeconds())}`;
-    });
+    if (timerEl) {
+      timerEl.textContent = `⏱ ${fmtDuration(getExTimerSeconds(exerciseId))}`;
+      const unsubscribe = onExTimerTick(() => {
+        if (!timerEl.isConnected) { unsubscribe(); return; }
+        timerEl.textContent = `⏱ ${fmtDuration(getExTimerSeconds(exerciseId))}`;
+      });
+    }
   }
 }
 
