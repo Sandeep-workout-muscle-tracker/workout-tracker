@@ -603,7 +603,10 @@ function openTimerConflictPrompt(otherTimers, targetExerciseId, proceedFn) {
       {
         label: "Discard other(s)",
         onClick: (close) => {
-          otherTimers.forEach(t => stopExTimer(t.exerciseId));
+          otherTimers.forEach(t => {
+            stopExTimer(t.exerciseId);
+            clearExDraft(t.exerciseId);
+          });
           close();
           proceedFn();
         },
