@@ -76,6 +76,24 @@ function fmtDuration(sec) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// ---------- Log-form drafts (per exercise) ----------
+// When user hits Back, we save the current sets + notes here so re-opening
+// the drawer restores what they had typed. On Save or × Cancel we clear it.
+const logDrafts = new Map();  // exerciseId -> { sets, note }
+
+function saveExDraft(exerciseId, sets, note) {
+  logDrafts.set(exerciseId, { sets, note });
+}
+function getExDraft(exerciseId) {
+  return logDrafts.get(exerciseId) || null;
+}
+function clearExDraft(exerciseId) {
+  logDrafts.delete(exerciseId);
+}
+function hasExDraft(exerciseId) {
+  return logDrafts.has(exerciseId);
+}
+
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -117,8 +135,14 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   const existing = isEdit ? getData().logs.find(l => l.id === editLogId) : null;
   const name = exerciseName(exerciseId);
   const dateValue = existing?.date || presetDate || todayStr();
-  const initialSets = existing?.sets?.length ? existing.sets : [{ weight: "", reps: "" }, { weight: "", reps: "" }];
-  const initialNote = existing?.note || "";
+  // Prefer draft (from a prior Back) over defaults in non-edit mode
+  const draft = isEdit ? null : getExDraft(exerciseId);
+  const initialSets = draft?.sets?.length
+    ? draft.sets
+    : (existing?.sets?.length ? existing.sets : [{ weight: "", reps: "" }, { weight: "", reps: "" }]);
+  const initialNote = draft?.note != null
+    ? draft.note
+    : (existing?.note || "");
 
   // Start a fresh per-exercise stopwatch on new-log open (edit mode preserves existing duration).
   // If a timer is already running for this exercise (e.g. user hit Back earlier),
@@ -181,13 +205,38 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   }
   initialSets.forEach(s => addRow(s.weight, s.reps));
 
+  // Read the current sets from the DOM. Kept partial values (e.g. weight typed
+  // but no reps yet) so drafts don't silently drop half-entered data.
+  function readSetsFromDom() {
+    return Array.from(setsRows.querySelectorAll(".set-row")).map(row => {
+      const w = row.querySelector(".set-weight").value;
+      const r = row.querySelector(".set-reps").value;
+      return {
+        weight: w === "" ? "" : (parseFloat(w) || 0),
+        reps: r === "" ? "" : (parseInt(r) || 0),
+      };
+    });
+  }
+
   // Two ways to close the drawer:
-  //   1. Back / backdrop tap: leave the timer running so user can log something else
-  //      in parallel. They can reopen this exercise's drawer later and Save the accumulated time.
-  //   2. × (top right): fully cancel — stop the timer, discard the duration.
-  function backAndKeepTimer() { container.innerHTML = ""; if (onSaved) onSaved(); }
+  //   1. Back / backdrop tap: leave the timer running AND save the sets/notes
+  //      as a draft so re-opening restores them. User can log something else
+  //      in parallel and come back to finish this one.
+  //   2. × (top right): fully cancel — stop the timer, discard draft, close.
+  function backAndKeepTimer() {
+    if (!isEdit) {
+      const sets = readSetsFromDom();
+      const note = container.querySelector("#log-note").value;
+      saveExDraft(exerciseId, sets, note);
+    }
+    container.innerHTML = "";
+    if (onSaved) onSaved();
+  }
   function fullCancel() {
-    if (!isEdit) stopExTimer(exerciseId);
+    if (!isEdit) {
+      stopExTimer(exerciseId);
+      clearExDraft(exerciseId);
+    }
     container.innerHTML = "";
     if (onSaved) onSaved();
   }
@@ -200,15 +249,16 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   container.querySelector("#save-log").addEventListener("click", () => {
     const date = container.querySelector("#log-date").value || todayStr();
     const note = container.querySelector("#log-note").value.trim();
-    const sets = Array.from(setsRows.querySelectorAll(".set-row")).map(row => ({
-      weight: parseFloat(row.querySelector(".set-weight").value) || 0,
-      reps: parseInt(row.querySelector(".set-reps").value) || 0,
-    })).filter(s => s.weight > 0 || s.reps > 0);
+    const sets = readSetsFromDom()
+      .map(s => ({ weight: parseFloat(s.weight) || 0, reps: parseInt(s.reps) || 0 }))
+      .filter(s => s.weight > 0 || s.reps > 0);
 
     if (sets.length === 0) { alert("Add at least one set with a weight or rep count."); return; }
 
     // Snapshot & stop the exercise timer BEFORE we save so we can attach duration.
     const durationSec = isEdit ? null : stopExTimer(exerciseId);
+    // Clear the draft — this log is now committed.
+    if (!isEdit) clearExDraft(exerciseId);
 
     if (isEdit) {
       save(data => {
