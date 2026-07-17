@@ -17,6 +17,28 @@ let lastSyncDetail = null;
 
 function el(id) { return document.getElementById(id); }
 
+// ---------------- THEME ----------------
+const THEME_KEY = "ironomicon-theme";
+
+function currentTheme() {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  // Keep the browser chrome color in sync (mobile address bar / PWA titlebar)
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "light" ? "#F7F6F3" : "#FF6B3D");
+  const btn = document.getElementById("theme-toggle");
+  if (btn) {
+    btn.textContent = theme === "light" ? "☾" : "☀";
+    btn.title = theme === "light" ? "Switch to dark theme" : "Switch to light theme";
+  }
+}
+function toggleTheme() {
+  applyTheme(currentTheme() === "light" ? "dark" : "light");
+}
+
 function renderShell() {
   document.body.innerHTML = `
     <div class="app-shell">
@@ -31,6 +53,7 @@ function renderShell() {
               <span class="nav-icon">${v.icon}</span>${v.label}
             </button>`).join("")}
         </div>
+        <button class="theme-toggle" id="theme-toggle" title="Switch theme">☀</button>
         <div class="sync-indicator" id="sync-indicator">
           <span class="sync-dot" id="sync-dot"></span>
           <span id="sync-text">…</span>
@@ -44,6 +67,10 @@ function renderShell() {
   document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", () => switchToView(btn.dataset.view));
   });
+  document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
+
+  // Sync the toggle icon with whatever theme boot script applied
+  applyTheme(currentTheme());
 
   updateSyncIndicator(lastSyncStatus, lastSyncDetail);
   renderView();
