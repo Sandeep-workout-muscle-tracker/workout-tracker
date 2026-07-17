@@ -48,6 +48,68 @@
   --shadow-glow: 0 0 24px var(--accent-glow);
 }
 
+/* ==========================================================================
+   LIGHT THEME — activated via <html data-theme="light">
+   ========================================================================== */
+html[data-theme="light"] {
+  --bg-0: #F7F6F3;              /* page background */
+  --bg-1: #FFFFFF;              /* main panel base */
+  --bg-2: #FFFFFF;              /* cards */
+  --bg-3: #F1EFEA;              /* elevated cards */
+  --bg-4: #EAE8E1;              /* inputs / raised */
+  --line: #E4E2DB;
+  --line-bright: #D5D2C8;
+  --line-strong: #B8B4A8;
+
+  --text: #1D2025;
+  --text-muted: #5A6270;
+  --text-dim: #8A8F98;
+
+  --accent: #E85A2A;            /* slightly deepened orange for contrast on white */
+  --accent-hi: #FF6B3D;
+  --accent-lo: #C74317;
+  --accent-glow: rgba(232, 90, 42, 0.25);
+  --accent-soft: rgba(232, 90, 42, 0.10);
+
+  --accent-2: #B8860B;          /* darker amber, readable on white */
+  --accent-2-soft: rgba(184, 134, 11, 0.10);
+
+  --good: #15803D;              /* darker green for contrast */
+  --good-soft: rgba(21, 128, 61, 0.10);
+  --good-glow: rgba(21, 128, 61, 0.25);
+
+  --info: #1D4ED8;
+  --info-soft: rgba(29, 78, 216, 0.08);
+
+  --danger: #DC2626;
+
+  --shadow-1: 0 1px 2px rgba(20, 20, 15, 0.08);
+  --shadow-2: 0 8px 24px rgba(20, 20, 15, 0.10), 0 2px 6px rgba(20, 20, 15, 0.06);
+  --shadow-glow: 0 0 24px var(--accent-glow);
+}
+
+html[data-theme="light"] body {
+  background:
+    radial-gradient(1200px 600px at 20% 0%, rgba(232,90,42,0.05), transparent 60%),
+    radial-gradient(900px 500px at 100% 20%, rgba(29,78,216,0.04), transparent 60%),
+    var(--bg-0);
+  background-attachment: fixed;
+}
+
+/* Dark-specific white-alpha hovers become dark-alpha on light theme */
+html[data-theme="light"] .nav-item:hover { background: rgba(0,0,0,0.04); }
+html[data-theme="light"] .plan-section { background: rgba(0,0,0,0.015); }
+html[data-theme="light"] .sidenav { background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%); }
+html[data-theme="light"] .btn-primary {
+  color: #FFFFFF;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 2px 8px rgba(232,90,42,0.25);
+}
+html[data-theme="light"] .btn-good { color: #FFFFFF; }
+html[data-theme="light"] .plan-ex-chip.done .plan-ex-serial { color: #FFFFFF; }
+html[data-theme="light"] .day-log-row.done .day-log-serial { color: #FFFFFF; }
+/* The muscle-map panel is already light in both themes; give it a border that reads on white */
+html[data-theme="light"] .map-panel { border-color: var(--line-strong); }
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -169,6 +231,26 @@ a { color: inherit; }
   padding: 10px 12px;
   border-top: 1px solid var(--line);
   margin-top: 12px;
+}
+
+.theme-toggle {
+  align-self: flex-start;
+  margin: 8px 8px 0;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line-bright);
+  background: var(--bg-3);
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
 .sync-dot.sync-ok { background: var(--good); box-shadow: 0 0 8px var(--good-glow); }
@@ -1330,6 +1412,13 @@ button.plan-ex-serial.editable:hover {
   }
   .brand-sub { display: none; }   /* subtitle hidden on mobile */
   .sync-indicator { display: none; }
+  .theme-toggle {
+    align-self: center;
+    margin: 0 0 0 4px;
+    width: 32px; height: 32px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
   .nav-list { flex-direction: row; flex: none; gap: 4px; }
   .nav-item {
     padding: 8px 14px;
