@@ -481,28 +481,28 @@ a { color: inherit; }
 }
 .body-svg { width: 100%; max-width: 210px; height: auto; }
 .outline {
-  fill: #EDEBE4;
-  stroke: #3A3F48;
-  stroke-width: 1.4;
+  fill: #EBEBEF;
+  stroke: #4E5375;
+  stroke-width: 1.3;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 .muscle-region {
-  fill: #D6D3CB;
-  stroke: #3A3F48;
-  stroke-width: 0.9;
+  fill: #DDDDE4;
+  stroke: #4E5375;
+  stroke-width: 0.85;
   cursor: pointer;
   transition: fill 0.15s ease;
 }
-.muscle-region:focus { outline: none; stroke: var(--accent); stroke-width: 1.6; }
-.muscle-region:hover { fill: #BCB8AE; }
+.muscle-region:focus { outline: none; stroke: var(--accent); stroke-width: 1.4; }
+.muscle-region:hover { fill: #C6C6D2; }
 .muscle-region.selected {
-  fill: var(--accent);
-  stroke: var(--accent-lo);
-  stroke-width: 1.4;
+  fill: #F45B69;
+  stroke: #C73E4B;
+  stroke-width: 1.1;
 }
-.decor-line { stroke: #3A3F48; stroke-width: 0.7; opacity: 0.55; fill: none; }
-.knee { fill: #EDEBE4; stroke: #3A3F48; stroke-width: 0.9; pointer-events: none; }
+.decor-line { stroke: #4E5375; stroke-width: 0.7; opacity: 0.5; fill: none; pointer-events: none; }
+.knee { fill: #EBEBEF; stroke: #4E5375; stroke-width: 0.85; pointer-events: none; }
 .map-caption { color: #6A6A62; font-size: 12px; margin-top: 12px; text-align: center; }
 
 .list-panel-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
