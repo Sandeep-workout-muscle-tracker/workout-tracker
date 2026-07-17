@@ -1,93 +1,90 @@
-// Anatomical-style body diagram (front + back shown together, side by side) with
-// clickable, rounded panels for every sub-muscle.
+// Anatomical body map (generated with mirrored-symmetry tooling).
+// Front + back figures; muscles are clickable regions with data-sub attributes.
 
+const BODY_OUTLINE = `M120,68 C124,70 127,76 128,84 C136,88 152,90 163,97 C172,102 178,112 179,124 C179,140 177,155 175,170 C173,185 171,200 168,222 C170,230 173,238 172,248 C171,258 166,262 161,258 C157,252 156,240 157,228 C158,212 159,196 158,178 C157,162 155,142 151,128 C149,140 147,158 145,178 C143,192 142,204 143,216 C146,228 150,238 151,250 C152,270 150,300 146,330 C144,342 143,352 143,362 C146,374 146,392 142,412 C139,428 137,440 136,448 C140,452 142,458 139,465 C134,470 122,470 117,464 C115,458 116,448 117,440 C119,424 121,405 121,388 C121,372 121,360 122,348 C123,326 122,302 121,288 C120.5,285 120.2,284 120,284 C119.8,284 119.5,285 119,288 C118,302 117,326 118,348 C119,360 119,372 119,388 C119,405 121,424 123,440 C124,448 125,458 123,464 C118,470 106,470 101,465 C98,458 100,452 104,448 C103,440 101,428 98,412 C94,392 94,374 97,362 C97,352 96,342 94,330 C90,300 88,270 89,250 C90,238 94,228 97,216 C98,204 97,192 95,178 C93,158 91,140 89,128 C85,142 83,162 82,178 C81,196 82,212 83,228 C84,240 83,252 79,258 C74,262 69,258 68,248 C67,238 70,230 72,222 C69,200 67,185 65,170 C63,155 61,140 61,124 C62,112 68,102 77,97 C88,90 104,88 112,84 C113,76 116,70 120,68 Z`;
+const BODY_HEAD = `M120,16 C104,16 96,28 96,44 C96,56 103,66 111,70 C114,72 126,72 129,70 C137,66 144,56 144,44 C144,28 136,16 120,16 Z`;
+const BODY_NECK = `M111,70 C112,76 112,80 111,84 L129,84 C128,80 128,76 129,70 Z`;
 
 const REGIONS = {
   front: [
-    { sub: "delts_front", shape: "ellipse", cx: 108, cy: 118, rx: 28, ry: 26 },
-    { sub: "delts_front", shape: "ellipse", cx: 292, cy: 118, rx: 28, ry: 26 },
-    { sub: "traps", shape: "path", d: "M172,86 Q200,76 200,100 L178,106 Q172,96 172,86 Z" },
-    { sub: "traps", shape: "path", d: "M228,86 Q200,76 200,100 L222,106 Q228,96 228,86 Z" },
-    { sub: "chest_upper", shape: "ellipse", cx: 170, cy: 118, rx: 38, ry: 20 },
-    { sub: "chest_upper", shape: "ellipse", cx: 230, cy: 118, rx: 38, ry: 20 },
-    { sub: "chest_mid", shape: "ellipse", cx: 168, cy: 148, rx: 36, ry: 22 },
-    { sub: "chest_mid", shape: "ellipse", cx: 232, cy: 148, rx: 36, ry: 22 },
-    { sub: "chest_lower", shape: "ellipse", cx: 172, cy: 176, rx: 26, ry: 14 },
-    { sub: "chest_lower", shape: "ellipse", cx: 228, cy: 176, rx: 26, ry: 14 },
-    { sub: "abs_upper", shape: "rect", x: 178, y: 198, w: 20, h: 30, rx: 8 },
-    { sub: "abs_upper", shape: "rect", x: 202, y: 198, w: 20, h: 30, rx: 8 },
-    { sub: "abs_lower", shape: "rect", x: 178, y: 232, w: 20, h: 46, rx: 8 },
-    { sub: "abs_lower", shape: "rect", x: 202, y: 232, w: 20, h: 46, rx: 8 },
-    { sub: "obliques", shape: "rect", x: 150, y: 200, w: 20, h: 80, rx: 10 },
-    { sub: "obliques", shape: "rect", x: 230, y: 200, w: 20, h: 80, rx: 10 },
-    { sub: "biceps", shape: "rect", x: 78, y: 128, w: 28, h: 86, rx: 14 },
-    { sub: "biceps", shape: "rect", x: 294, y: 128, w: 28, h: 86, rx: 14 },
-    { sub: "forearms", shape: "rect", x: 76, y: 220, w: 24, h: 78, rx: 12 },
-    { sub: "forearms", shape: "rect", x: 300, y: 220, w: 24, h: 78, rx: 12 },
-    { sub: "quads", shape: "rect", x: 158, y: 300, w: 38, h: 120, rx: 18 },
-    { sub: "quads", shape: "rect", x: 204, y: 300, w: 38, h: 120, rx: 18 },
-    { sub: "adductors", shape: "rect", x: 195, y: 300, w: 10, h: 120, rx: 5 },
-    { sub: "calves", shape: "rect", x: 160, y: 432, w: 36, h: 88, rx: 17 },
-    { sub: "calves", shape: "rect", x: 204, y: 432, w: 36, h: 88, rx: 17 },
+    { sub: "traps", d: "M128,84 C138,86 152,90 161,97 C152,99 140,99 132,95 C129,92 128,88 128,84 Z" },
+    { sub: "traps", d: "M112,84 C102,86 88,90 79,97 C88,99 100,99 108,95 C111,92 112,88 112,84 Z" },
+    { sub: "delts_front", d: "M151,99 C161,98 172,104 176,114 C178,122 177,130 173,135 C168,128 163,118 158,110 C155,105 152,101 151,99 Z" },
+    { sub: "delts_front", d: "M89,99 C79,98 68,104 64,114 C62,122 63,130 67,135 C72,128 77,118 82,110 C85,105 88,101 89,99 Z" },
+    { sub: "chest_upper", d: "M122,97 C133,94 147,96 156,103 C158,106 159,109 158,112 C146,110 133,110 122,112 Z" },
+    { sub: "chest_upper", d: "M118,97 C107,94 93,96 84,103 C82,106 81,109 82,112 C94,110 107,110 118,112 Z" },
+    { sub: "chest_mid", d: "M122,112 C133,110 146,110 158,112 C158,120 156,126 152,130 C142,128 131,128 122,130 Z" },
+    { sub: "chest_mid", d: "M118,112 C107,110 94,110 82,112 C82,120 84,126 88,130 C98,128 109,128 118,130 Z" },
+    { sub: "chest_lower", d: "M122,130 C131,128 142,128 152,130 C148,138 139,143 130,143 C126,143 123,141 122,138 Z" },
+    { sub: "chest_lower", d: "M118,130 C109,128 98,128 88,130 C92,138 101,143 110,143 C114,143 117,141 118,138 Z" },
+    { sub: "biceps", d: "M156,132 C162,134 168,142 170,154 C171,164 170,172 167,178 C162,172 158,160 156,148 C155,142 155,136 156,132 Z" },
+    { sub: "biceps", d: "M84,132 C78,134 72,142 70,154 C69,164 70,172 73,178 C78,172 82,160 84,148 C85,142 85,136 84,132 Z" },
+    { sub: "forearms", d: "M160,182 C164,186 167,196 167,208 C167,216 165,222 162,225 C160,218 159,206 159,194 C159,190 159,185 160,182 Z" },
+    { sub: "forearms", d: "M80,182 C76,186 73,196 73,208 C73,216 75,222 78,225 C80,218 81,206 81,194 C81,190 81,185 80,182 Z" },
+    { sub: "abs_upper", d: "M122,146 L138,146 C139,152 139,158 138,163 L122,163 Z" },
+    { sub: "abs_upper", d: "M118,146 L102,146 C101,152 101,158 102,163 L118,163 Z" },
+    { sub: "abs_upper", d: "M122,166 L138,166 C138,171 138,176 137,181 L122,181 Z" },
+    { sub: "abs_upper", d: "M118,166 L102,166 C102,171 102,176 103,181 L118,181 Z" },
+    { sub: "abs_lower", d: "M122,184 L137,184 C137,190 136,196 135,201 L122,201 Z" },
+    { sub: "abs_lower", d: "M118,184 L103,184 C103,190 104,196 105,201 L118,201 Z" },
+    { sub: "abs_lower", d: "M122,204 L135,204 C134,213 130,221 124,226 C123,226 122,225 122,224 Z" },
+    { sub: "abs_lower", d: "M118,204 L105,204 C106,213 110,221 116,226 C117,226 118,225 118,224 Z" },
+    { sub: "obliques", d: "M141,148 C144,158 145,172 144,186 C143,196 141,204 139,210 C137,200 136,186 137,170 C138,162 139,154 141,148 Z" },
+    { sub: "obliques", d: "M99,148 C96,158 95,172 96,186 C97,196 99,204 101,210 C103,200 104,186 103,170 C102,162 101,154 99,148 Z" },
+    { sub: "quads", d: "M126,252 C137,254 146,264 148,282 C150,304 148,326 142,344 C138,352 132,356 128,352 C125,336 124,310 124,284 C124,272 125,260 126,252 Z" },
+    { sub: "quads", d: "M114,252 C103,254 94,264 92,282 C90,304 92,326 98,344 C102,352 108,356 112,352 C115,336 116,310 116,284 C116,272 115,260 114,252 Z" },
+    { sub: "adductors", d: "M121,290 C122,304 122,322 122,338 C121,330 120,312 120,296 C120,292 120,290 121,290 Z" },
+    { sub: "adductors", d: "M119,290 C118,304 118,322 118,338 C119,330 120,312 120,296 C120,292 120,290 119,290 Z" },
+    { sub: "quads", d: "M128,356 C133,356 137,360 137,366 C137,371 133,374 129,374 C125,374 123,370 123,365 C123,360 125,356 128,356 Z" },
+    { sub: "quads", d: "M112,356 C107,356 103,360 103,366 C103,371 107,374 111,374 C115,374 117,370 117,365 C117,360 115,356 112,356 Z" },
+    { sub: "calves", d: "M128,378 C134,382 138,394 137,408 C136,422 132,436 128,442 C126,432 125,414 125,398 C125,390 126,382 128,378 Z" },
+    { sub: "calves", d: "M112,378 C106,382 102,394 103,408 C104,422 108,436 112,442 C114,432 115,414 115,398 C115,390 114,382 112,378 Z" },
   ],
   back: [
-    { sub: "delts_rear", shape: "ellipse", cx: 108, cy: 118, rx: 28, ry: 26 },
-    { sub: "delts_rear", shape: "ellipse", cx: 292, cy: 118, rx: 28, ry: 26 },
-    { sub: "traps", shape: "path", d: "M160,84 Q200,72 240,84 L200,152 Z" },
-    { sub: "rhomboids", shape: "rect", x: 172, y: 140, w: 56, h: 44, rx: 16 },
-    { sub: "lats", shape: "rect", x: 144, y: 138, w: 26, h: 98, rx: 13 },
-    { sub: "lats", shape: "rect", x: 230, y: 138, w: 26, h: 98, rx: 13 },
-    { sub: "lower_back", shape: "rect", x: 172, y: 190, w: 56, h: 42, rx: 16 },
-    { sub: "triceps", shape: "rect", x: 78, y: 128, w: 28, h: 86, rx: 14 },
-    { sub: "triceps", shape: "rect", x: 294, y: 128, w: 28, h: 86, rx: 14 },
-    { sub: "forearms", shape: "rect", x: 76, y: 220, w: 24, h: 78, rx: 12 },
-    { sub: "forearms", shape: "rect", x: 300, y: 220, w: 24, h: 78, rx: 12 },
-    { sub: "glutes", shape: "ellipse", cx: 180, cy: 325, rx: 22, ry: 26 },
-    { sub: "glutes", shape: "ellipse", cx: 220, cy: 325, rx: 22, ry: 26 },
-    { sub: "hamstrings", shape: "rect", x: 158, y: 356, w: 38, h: 90, rx: 18 },
-    { sub: "hamstrings", shape: "rect", x: 204, y: 356, w: 38, h: 90, rx: 18 },
-    { sub: "adductors", shape: "rect", x: 195, y: 356, w: 10, h: 90, rx: 5 },
-    { sub: "calves", shape: "rect", x: 160, y: 452, w: 36, h: 88, rx: 17 },
-    { sub: "calves", shape: "rect", x: 204, y: 452, w: 36, h: 88, rx: 17 },
+    { sub: "traps", d: "M122,84 C134,87 150,93 159,99 C150,106 140,110 133,112 C128,130 124,152 122,174 C122,176 122,177 122,177 L122,84 Z" },
+    { sub: "traps", d: "M118,84 C106,87 90,93 81,99 C90,106 100,110 107,112 C112,130 116,152 118,174 C118,176 118,177 118,177 L118,84 Z" },
+    { sub: "delts_rear", d: "M152,100 C162,99 172,105 176,115 C178,123 177,131 173,136 C167,129 161,118 156,109 C154,105 153,102 152,100 Z" },
+    { sub: "delts_rear", d: "M88,100 C78,99 68,105 64,115 C62,123 63,131 67,136 C73,129 79,118 84,109 C86,105 87,102 88,100 Z" },
+    { sub: "rhomboids", d: "M136,112 C144,112 152,116 155,122 C154,132 149,140 141,144 C136,140 132,132 131,122 C132,117 134,113 136,112 Z" },
+    { sub: "rhomboids", d: "M104,112 C96,112 88,116 85,122 C86,132 91,140 99,144 C104,140 108,132 109,122 C108,117 106,113 104,112 Z" },
+    { sub: "lats", d: "M150,130 C152,142 151,158 147,174 C143,188 137,199 129,206 C126,198 124,186 125,170 C130,168 137,162 141,152 C144,145 147,136 150,130 Z" },
+    { sub: "lats", d: "M90,130 C88,142 89,158 93,174 C97,188 103,199 111,206 C114,198 116,186 115,170 C110,168 103,162 99,152 C96,145 93,136 90,130 Z" },
+    { sub: "lower_back", d: "M122,180 L134,186 C133,196 130,206 126,213 C124,214 123,214 122,214 Z" },
+    { sub: "lower_back", d: "M118,180 L106,186 C107,196 110,206 114,213 C116,214 117,214 118,214 Z" },
+    { sub: "triceps", d: "M156,132 C162,135 168,143 170,155 C171,165 169,173 166,179 C161,172 158,160 156,148 C155,142 155,136 156,132 Z" },
+    { sub: "triceps", d: "M84,132 C78,135 72,143 70,155 C69,165 71,173 74,179 C79,172 82,160 84,148 C85,142 85,136 84,132 Z" },
+    { sub: "forearms", d: "M160,183 C164,187 167,197 167,209 C167,217 165,223 162,226 C160,219 159,207 159,195 C159,190 159,186 160,183 Z" },
+    { sub: "forearms", d: "M80,183 C76,187 73,197 73,209 C73,217 75,223 78,226 C80,219 81,207 81,195 C81,190 81,186 80,183 Z" },
+    { sub: "glutes", d: "M122,228 C134,226 146,232 149,244 C151,256 147,268 138,273 C129,276 122,272 122,264 Z" },
+    { sub: "glutes", d: "M118,228 C106,226 94,232 91,244 C89,256 93,268 102,273 C111,276 118,272 118,264 Z" },
+    { sub: "hamstrings", d: "M126,280 C137,282 145,292 146,310 C147,328 144,344 139,354 C134,360 128,360 126,354 C124,336 124,306 126,280 Z" },
+    { sub: "hamstrings", d: "M114,280 C103,282 95,292 94,310 C93,328 96,344 101,354 C106,360 112,360 114,354 C116,336 116,306 114,280 Z" },
+    { sub: "calves", d: "M129,372 C137,376 141,390 140,404 C139,418 134,432 129,438 C125,430 123,414 124,398 C125,386 126,377 129,372 Z" },
+    { sub: "calves", d: "M111,372 C103,376 99,390 100,404 C101,418 106,432 111,438 C115,430 117,414 116,398 C115,386 114,377 111,372 Z" },
   ],
 };
 
-// Static outline drawn behind the clickable panels — same silhouette for both views.
-const CHASSIS_SVG = `
-  <circle cx="200" cy="42" r="30" class="chassis" />
-  <rect x="185" y="66" width="30" height="24" rx="6" class="chassis" />
-  <path d="M120,96 Q200,70 280,96 L266,300 Q200,320 134,300 Z" class="chassis" />
-  <path d="M90,96 Q70,100 60,120 L52,230 Q50,250 60,258 L78,258 L80,320 L108,320 L118,96 Z" class="chassis" />
-  <path d="M310,96 Q330,100 340,120 L348,230 Q350,250 340,258 L322,258 L320,320 L292,320 L282,96 Z" class="chassis" />
-  <circle cx="65" cy="270" r="15" class="chassis" />
-  <circle cx="335" cy="270" r="15" class="chassis" />
-  <path d="M140,300 L260,300 L252,540 L148,540 Z" class="chassis" />
-  <ellipse cx="176" cy="562" rx="24" ry="12" class="chassis" />
-  <ellipse cx="224" cy="562" rx="24" ry="12" class="chassis" />
-`;
+const DECOR = {
+  front: `<path class="decor-line" d="M120,96 L120,142"/><path class="decor-line" d="M120,96 C130,93 146,94 158,100"/><path class="decor-line" d="M120,96 C110,93 94,94 82,100"/><path class="decor-line" d="M120,146 L120,226"/>`,
+  back: `<path class="decor-line" d="M120,84 L120,214"/>`,
+};
 
-function shapeToSvg(region) {
+function regionToSvg(region) {
   const subLabel = SUBMUSCLE_LABELS[region.sub] || region.sub;
-  const common = `class="muscle-region" data-sub="${region.sub}" tabindex="0" role="button" aria-label="${subLabel}"`;
-  let elMarkup = "";
-  if (region.shape === "rect") {
-    elMarkup = `<rect ${common} x="${region.x}" y="${region.y}" width="${region.w}" height="${region.h}" rx="${region.rx || 0}"></rect>`;
-  } else if (region.shape === "ellipse") {
-    elMarkup = `<ellipse ${common} cx="${region.cx}" cy="${region.cy}" rx="${region.rx}" ry="${region.ry}"></ellipse>`;
-  } else if (region.shape === "polygon") {
-    elMarkup = `<polygon ${common} points="${region.points}"></polygon>`;
-  } else if (region.shape === "path") {
-    elMarkup = `<path ${common} d="${region.d}"></path>`;
-  }
-  return `<g class="region-group">${elMarkup}<title>${subLabel}</title></g>`;
+  return `<path class="muscle-region" data-sub="${region.sub}" tabindex="0" role="button" aria-label="${subLabel}" d="${region.d}"><title>${subLabel}</title></path>`;
 }
 
 function buildBodySvg(view) {
-  const regions = REGIONS[view].map(shapeToSvg).join("\n");
+  const regions = REGIONS[view].map(regionToSvg).join("\n");
   return `
-  <svg viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg" class="body-svg" data-view="${view}">
-    <g class="chassis-layer">${CHASSIS_SVG}</g>
+  <svg viewBox="0 0 240 500" xmlns="http://www.w3.org/2000/svg" class="body-svg" data-view="${view}">
+    <g class="chassis-layer">
+      <path class="outline" d="${BODY_OUTLINE}"></path>
+      <path class="outline" d="${BODY_HEAD}"></path>
+      <path class="outline" d="${BODY_NECK}"></path>
+    </g>
     <g class="regions-layer">${regions}</g>
+    <g class="decor-layer">${DECOR[view]}</g>
   </svg>`;
 }
 
@@ -118,8 +115,6 @@ function initMuscleMap(container, onSelect) {
       node.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectSub(sub); }
       });
-      node.addEventListener("mouseenter", () => node.classList.add("hovered"));
-      node.addEventListener("mouseleave", () => node.classList.remove("hovered"));
     });
     highlightSelected();
   }
