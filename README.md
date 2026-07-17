@@ -1,60 +1,128 @@
-# Gym // Schematic — Workout & Muscle Tracker
+# Ironomicon — Personal Lifting Grimoire
 
-A static, single-page workout app you host on GitHub Pages. No server, no build step —
-just HTML/CSS/JS. Covers:
+Your personal grimoire of iron. A static, single-page workout tracker you host free on
+GitHub Pages. No server, no build step, no accounts — just HTML/CSS/JS and your own
+GitHub repo as the database. Installable on your phone as a full-screen app.
 
-- An interactive front/back body schematic — click any panel (chest, delts, lats, quads, etc.,
-  down to sub-muscles) to see every exercise that trains it.
-- An exercise library (~150 exercises) across barbell, dumbbell, cable, machine, bodyweight,
-  kettlebell, band, smith machine and plate work.
-- A workout logger — log sets (weight × reps) per exercise, with history and a simple
-  progress chart per exercise.
-- A calendar planner — assign exercises to future days, see which days already have a
-  logged workout.
-- A nutrition calculator — add foods/veggies by gram amount, see running totals for
-  calories, protein, carbs, fiber, fat.
+## Features
+
+### 🏋️ Train
+- **Anatomical muscle map** — front + back body illustration; click any muscle to see
+  every exercise that trains it. Selected muscles highlight in red.
+- **Hierarchical categories** — main tabs (Chest / Back / Shoulders / Arms / Legs /
+  Core / Cardio / Warmup / Cooldown) with sub-muscle chips beneath (e.g. Upper /
+  Mid / Lower Chest), plus in-category search.
+- **229 built-in exercises** across barbell, dumbbell, cable, machine, bodyweight,
+  kettlebell, band, smith machine, plate, cardio machines, and more — with short
+  form cues on every card.
+- **Cardio section** — running, cycling, rowing, elliptical, swimming, HIIT, jump
+  rope, stair climber.
+- **Warmup & Cooldown as first-class workout types**, organized by body part
+  (Chest Warmup, Legs Cooldown, Full Body, …) so you plan them like any exercise.
+
+### 📅 Calendar
+- Plan any day: add exercises from every category, give the day a label.
+- **Three-section plan** — Warmup / Main Workout / Cooldown, each with independent
+  serial numbering and color-coded borders (blue / orange / green).
+- **Reordering made easy** — ▲▼ nudge buttons, or tap any serial number to open a
+  position editor with Top / Up / Down / Bottom shortcuts and direct number entry.
+- **Move / Swap days** — pick a day, tap "↔ Move / Swap this day", choose a target
+  (even in another month), then Swap (exchange both days) or Move (overwrite).
+  Plans, logs and stopwatch records all travel together.
+- Day cells turn **green when logged**, amber when planned, orange ring for today.
+- Everything **auto-saves** — no save buttons.
+
+### ⏱ Timers
+- **Overall workout stopwatch** per day — Start / Stop with live counter, plus
+  actual start and end wall-clock times shown in IST.
+- **Per-exercise timers** — auto-start when you tap "Log sets", stop and save the
+  duration when you hit Save. Durations show next to each exercise and in History.
+- **Parallel timers** — hit "← Back" to keep an exercise's timer (and your typed
+  sets — they're drafted) running while you log something else. A prompt lets you
+  run timers in parallel or discard the others.
+
+### 📝 Logging & History
+- Log sets (weight × reps) with serial numbers, notes, and per-entry duration.
+- Full **History** view with edit ✎ and delete × on every entry.
+- Per-exercise **progress chart** (top-set weight over time).
+- Exercises deleted from the library keep their old logs, shown with a grey
+  "removed" tag — you never lose data.
+
+### 📊 Dashboard
+- Stat tiles: total workouts, total volume (tonnes), total sets, week-vs-week trend.
+- **Daily training volume** bar chart (last 30 days).
+- **Per-exercise trend** line chart with exercise picker.
+- **Muscle-group volume distribution** — see your chest/back/legs balance at a glance.
+
+### 🥗 Nutrition
+- **107 built-in foods** across 9 categories with full macros **and micronutrients**
+  (protein, carbs, sugar, fiber, fat, water, potassium, sodium, calcium, iron,
+  magnesium, zinc, vitamins A/C/D/E/K/B6/B12, folate, lycopene, antioxidants).
+- Add by grams or by count (eggs, bananas, …) and get running totals.
+
+### 📚 Library (full CRUD)
+- Add, edit or delete **any** exercise or food — including the built-in defaults.
+- Deleted entries move to a "Removed" section with one-tap Restore.
+- Reset-to-defaults button per library.
+- Changes appear instantly across Train, Calendar, History and Nutrition, and sync
+  to your data repo like everything else.
+
+### 🎨 Themes & Mobile
+- **Dark and light themes** — toggle with the ☀/☾ button; your choice persists and
+  applies before first paint (no flash).
+- **PWA / installable** — Add to Home Screen on iOS or Install App on Android for a
+  full-screen, offline-capable app with its own icon.
+- Fully responsive layouts tuned for phones: wrapped category tabs, compact
+  calendar cells, bottom-sheet log drawer, thumb-sized touch targets.
+
+### ☁️ Sync
+- **GitHub-repo-as-database** — every change auto-saves to a JSON file in a repo
+  you own, via a fine-grained personal access token stored only in your browser.
+- Works across any browser/device: open the site, paste the token once, and your
+  entire history follows you.
 
 ## 1. Deploy to GitHub Pages
 
 1. Create a new **public** GitHub repo (e.g. `workout-tracker`).
-2. Upload all files in this folder (`index.html`, `css/`, `js/`) to the repo root, keeping
-   the folder structure.
-3. In the repo: **Settings → Pages → Build and deployment → Source: Deploy from a branch**,
+2. Upload every file in this folder to the repo **root** (flat — `index.html`,
+   `style.css`, all `.js` files, `manifest.json`, `sw.js`, and the icon PNGs).
+3. **Settings → Pages → Build and deployment → Source: Deploy from a branch**,
    branch `main`, folder `/ (root)`. Save.
-4. Your site will be live at `https://<your-username>.github.io/workout-tracker/` within
+4. Your site is live at `https://<your-username>.github.io/workout-tracker/` within
    a minute or two.
 
-## 2. Set up cross-device sync (optional but recommended)
+## 2. Set up cross-device sync (recommended)
 
-The app works immediately with browser-local storage, but data won't follow you across
-browsers/devices until you connect a GitHub repo as a data store — same idea as Ledger.
+The app works immediately with browser-local storage, but data won't follow you
+across devices until you connect a GitHub repo as a data store.
 
-1. Create **another** repo to hold just the data (can be the same repo if you prefer, but a
-   separate one — e.g. `workout-data` — keeps things tidy). Public is fine; this data isn't
-   sensitive.
-2. On GitHub: **Settings (your profile) → Developer settings → Personal access tokens →
-   Fine-grained tokens → Generate new token**.
+1. Create **another** repo to hold just the data (e.g. `workout-data`). Public is
+   fine; this data isn't sensitive.
+2. GitHub: **Settings (profile) → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token**
    - Repository access: only the `workout-data` repo.
    - Permissions: **Contents → Read and write**.
-   - Copy the generated token (starts with `github_pat_…`).
-3. In the app, open **Settings** and fill in:
-   - GitHub username/org
-   - Repository name (`workout-data`)
-   - Branch (`main`)
-   - Data file path (default `workout-data.json` is fine — it's created automatically)
-   - Personal access token
-4. Click **Test connection**, then **Save & sync**. From then on, every log, plan, or edit
-   auto-saves to that repo a couple seconds after you make it. Open the same URL in any
-   other browser, paste the same token in Settings, and you'll see the same data.
+3. In the app, open **Settings** and fill in: username, repo name, branch (`main`),
+   data file path (default `workout-data.json`), and the token.
+4. **Test connection**, then **Save & sync**. Every log, plan, or edit now
+   auto-saves to that repo seconds after you make it.
 
-The token is stored only in that browser's local storage and is only ever sent to
+The token lives only in your browser's local storage and is only ever sent to
 `api.github.com`. It is never committed into the site's code.
 
-## 3. Editing the exercise or food database
+## 3. Install on your phone
 
-- `js/data-exercises.js` — add/edit exercises. Each needs a unique `id`, a `sub` (one of the
-  sub-muscle keys defined in `MUSCLE_GROUPS`/`SUBMUSCLE_LABELS` at the top of the file), an
-  `equip` type, a short instruction `note`, and optional `secondary` muscles.
-- `js/data-foods.js` — add/edit foods. Each entry is nutrition **per 100g**.
+- **Android (Chrome):** open the site → menu (⋮) → **Install app**.
+- **iPhone (Safari):** open the site → Share → **Add to Home Screen**.
 
-Both files are plain JS arrays — no build step needed, just save and push.
+The app launches full-screen with its own icon, works offline (sync needs internet),
+and survives phone restarts.
+
+## 4. Customizing exercises & foods
+
+You don't need to touch code — use the **Library** tab in the app to add, edit, or
+remove exercises and foods. Everything syncs.
+
+(For bulk seed-data changes you can still edit `data-exercises.js` /
+`data-foods.js` directly; each exercise needs a unique `id`, a `sub` from
+`MUSCLE_GROUPS`, an `equip` type, and a short `note`.)
