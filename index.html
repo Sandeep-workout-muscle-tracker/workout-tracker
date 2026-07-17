@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<script>
+  try {
+    var t = localStorage.getItem("ironomicon-theme");
+    if (t === "light") document.documentElement.dataset.theme = "light";
+  } catch (e) {}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
 <title>Ironomicon — Personal Lifting Grimoire</title>
 <meta name="description" content="Ironomicon — your personal grimoire of iron. Muscle map, workout logger, calendar planner and nutrition calculator." />
