@@ -4,6 +4,51 @@
 let calCursor = new Date();
 let selectedDayDate = null;   // date currently open in the day panel
 
+// Four fixed workout slots per day. Shared by the day panel and by the
+// move/swap/copy helpers below, so they can never drift out of sync.
+const SESSION_KEYS = ["morning", "afternoon", "evening", "night"];
+const SESSION_META = {
+  morning:   { label: "Morning",   icon: "🌅" },
+  afternoon: { label: "Afternoon", icon: "🌤" },
+  evening:   { label: "Evening",   icon: "🌙" },
+  night:     { label: "Night",     icon: "🌌" },
+};
+function sessionLabel(k) { return (SESSION_META[k] && SESSION_META[k].label) || k; }
+
+// Read a plan's exercise ids for one session, tolerating the legacy flat shape
+// (pre-sessions plans are treated as Morning).
+function planSessionIds(plan, key) {
+  if (!plan) return [];
+  if (plan.sessions) return [...((plan.sessions[key] && plan.sessions[key].exerciseIds) || [])];
+  if (key === "morning" && Array.isArray(plan.exerciseIds)) return [...plan.exerciseIds];
+  return [];
+}
+
+// Write a session's ids back onto a plan object, normalizing it to the sessions
+// shape and retiring the legacy flat list.
+function planSetSessionIds(plan, key, ids) {
+  const out = { ...(plan || {}) };
+  if (!out.sessions) {
+    out.sessions = {};
+    SESSION_KEYS.forEach(k => { out.sessions[k] = { exerciseIds: planSessionIds(plan, k) }; });
+  } else {
+    out.sessions = { ...out.sessions };
+    SESSION_KEYS.forEach(k => {
+      out.sessions[k] = { exerciseIds: [...((out.sessions[k] && out.sessions[k].exerciseIds) || [])] };
+    });
+  }
+  delete out.exerciseIds;
+  out.sessions[key] = { exerciseIds: [...ids] };
+  return out;
+}
+
+// True when a plan has no exercises in any session and no label.
+function planIsEmpty(plan) {
+  if (!plan) return true;
+  if ((plan.title || "").trim()) return false;
+  return SESSION_KEYS.every(k => planSessionIds(plan, k).length === 0);
+}
+
 function fmtDate(y, m, d) {
   const mm = String(m + 1).padStart(2, "0");
   const dd = String(d).padStart(2, "0");
@@ -22,15 +67,24 @@ function renderCalendar(container) {
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const monthLabel = calCursor.toLocaleString("default", { month: "long", year: "numeric" });
 
-  const swapBanner = daySwapSourceDate ? `
-    <div class="swap-banner">
+  let swapBanner = "";
+  if (calPickMode) {
+    const src = `<b>${formatFriendlyDate(calPickMode.srcDate)}</b>`;
+    const isCopy = calPickMode.kind === "copy";
+    const what = isCopy && calPickMode.scope === "session"
+      ? `the <b>${sessionLabel(calPickMode.session)}</b> workout from ${src}`
+      : src;
+    const verb = isCopy ? `Pick a day to copy ${what} to.` : `Pick a target day to swap or move ${what} to.`;
+    swapBanner = `
+    <div class="swap-banner ${isCopy ? "copy-mode" : ""}">
       <div class="swap-banner-text">
-        <span class="swap-banner-icon">↔</span>
-        <span>Pick a target day to swap or move <b>${formatFriendlyDate(daySwapSourceDate)}</b> to. (Can be in another month.)</span>
+        <span class="swap-banner-icon">${isCopy ? "⧉" : "↔"}</span>
+        <span>${verb} (Can be in another month.)</span>
       </div>
       <button class="btn btn-ghost btn-small" id="swap-cancel">Cancel</button>
     </div>
-  ` : "";
+  `;
+  }
 
   container.innerHTML = `
     ${swapBanner}
@@ -47,7 +101,7 @@ function renderCalendar(container) {
     <div class="cal-grid cal-grid-dow" style="margin-top: 12px;">
       ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => `<div class="cal-dow">${d}</div>`).join("")}
     </div>
-    <div class="cal-grid ${daySwapSourceDate ? "cal-grid-swap-mode" : ""}" id="cal-cells-grid"></div>
+    <div class="cal-grid ${calPickMode ? "cal-grid-swap-mode" : ""}" id="cal-cells-grid"></div>
     <div id="cal-day-panel"></div>
     <div id="cal-log-modal-slot"></div>
   `;
@@ -72,7 +126,7 @@ function paintCells(container, y, m, startDow, daysInMonth) {
   if (!grid) return;
   const data = getData();
   const today = todayStr();
-  const inSwap = !!daySwapSourceDate;
+  const inSwap = !!calPickMode;
 
   let cells = "";
   for (let i = 0; i < startDow; i++) cells += `<div class="cal-cell cal-empty"></div>`;
@@ -88,7 +142,7 @@ function paintCells(container, y, m, startDow, daysInMonth) {
     if (hasLogs) cellClass += " cal-logged";
     else if (hasPlan) cellClass += " cal-planned";
     if (dateStr === selectedDayDate) cellClass += " cal-selected";
-    if (inSwap && dateStr === daySwapSourceDate) cellClass += " cal-swap-source";
+    if (inSwap && dateStr === calPickMode.srcDate) cellClass += " cal-swap-source";
 
     cells += `
       <div class="${cellClass}" data-date="${dateStr}">
@@ -102,12 +156,15 @@ function paintCells(container, y, m, startDow, daysInMonth) {
   grid.querySelectorAll(".cal-cell[data-date]").forEach(cell => {
     cell.addEventListener("click", () => {
       const clicked = cell.dataset.date;
-      if (daySwapSourceDate) {
-        if (clicked === daySwapSourceDate) {
+      if (calPickMode) {
+        const mode = calPickMode;
+        if (clicked === mode.srcDate && mode.kind === "swap") {
           // Tapping the source day cancels swap mode
           exitSwapMode(container);
+        } else if (mode.kind === "copy") {
+          openCopyConfirm(container, mode, clicked);
         } else {
-          openSwapConfirm(container, daySwapSourceDate, clicked);
+          openSwapConfirm(container, mode.srcDate, clicked);
         }
       } else {
         renderDayPanel(container, clicked);
@@ -131,7 +188,7 @@ function autoSave(mutator) {
   // save() already debounces its own remote sync; nothing more to do here.
 }
 
-function renderDayPanel(container, dateStr) {
+function renderDayPanel(container, dateStr, preferSession) {
   const panel = container.querySelector("#cal-day-panel");
   const modalSlot = container.querySelector("#cal-log-modal-slot");
   const data = getData();
@@ -139,22 +196,13 @@ function renderDayPanel(container, dateStr) {
 
   // ---- Sessions: three fixed slots per day ----
   // Normalize: legacy plans stored a flat exerciseIds array → treat as Morning.
-  const SESSION_KEYS = ["morning", "afternoon", "evening"];
-  const SESSION_META = {
-    morning:   { label: "Morning",   icon: "🌅" },
-    afternoon: { label: "Afternoon", icon: "🌤" },
-    evening:   { label: "Evening",   icon: "🌙" },
-  };
   const sessions = {};
-  SESSION_KEYS.forEach(k => {
-    sessions[k] = [...((plan.sessions && plan.sessions[k] && plan.sessions[k].exerciseIds) || [])];
-  });
-  if (!plan.sessions && Array.isArray(plan.exerciseIds) && plan.exerciseIds.length) {
-    sessions.morning = [...plan.exerciseIds];
-  }
+  SESSION_KEYS.forEach(k => { sessions[k] = planSessionIds(plan, k); });
 
-  // Active session: default to the first slot with exercises, else Morning.
-  let activeSession = SESSION_KEYS.find(k => sessions[k].length > 0) || "morning";
+  // Active session: caller's choice, else the first slot with exercises, else Morning.
+  let activeSession = (preferSession && SESSION_KEYS.includes(preferSession))
+    ? preferSession
+    : (SESSION_KEYS.find(k => sessions[k].length > 0) || "morning");
   let selectedGroups = [];
 
   // Mark this day as selected on the calendar grid
@@ -174,6 +222,10 @@ function renderDayPanel(container, dateStr) {
       <input type="text" id="plan-title" class="input" placeholder="e.g. Push — Chest &amp; Shoulders" value="${escapeAttr(plan.title || "")}" />
 
       <div class="session-tabs" id="session-tabs"></div>
+      <div class="session-actions">
+        <button class="btn btn-ghost btn-xs" id="session-move" title="Swap or move this slot's workout with another slot on the same day">↔ Move slot</button>
+        <button class="btn btn-ghost btn-xs" id="session-copy" title="Copy this slot's workout to another day">⧉ Copy slot to…</button>
+      </div>
 
       <div id="stopwatch-slot"></div>
 
@@ -191,6 +243,7 @@ function renderDayPanel(container, dateStr) {
       <div id="day-existing-logs"></div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px; flex-wrap: wrap;">
+        <button class="btn btn-ghost btn-small" id="copy-day" title="Copy this day's whole plan to another day">⧉ Copy day to…</button>
         <button class="btn btn-ghost btn-small" id="swap-day" title="Move or swap this day's workouts with another day">↔ Move / Swap this day</button>
         <button class="btn btn-danger btn-small" id="clear-plan">Clear day</button>
       </div>
@@ -590,6 +643,23 @@ function renderDayPanel(container, dateStr) {
     enterSwapMode(container, dateStr);
   });
 
+  panel.querySelector("#copy-day").addEventListener("click", () => {
+    enterCopyMode(container, dateStr, "day");
+  });
+
+  panel.querySelector("#session-copy").addEventListener("click", () => {
+    enterCopyMode(container, dateStr, "session", activeSession);
+  });
+
+  panel.querySelector("#session-move").addEventListener("click", () => {
+    openSessionMoveDialog(dateStr, activeSession, (targetSession) => {
+      // Re-open the day so every panel (tabs, stopwatch, plan, logs) reflects
+      // the new arrangement, landing on the slot the workout ended up in.
+      renderDayPanel(container, dateStr, targetSession);
+      refreshMonthCells(container);
+    });
+  });
+
   renderSessionTabs();
   renderSessionStopwatch();
   renderTargetHint();
@@ -635,8 +705,7 @@ function describeTimerKey(key) {
   if (i === -1) return exerciseName(key);
   const session = key.slice(0, i);
   const exId = key.slice(i + 1);
-  const label = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" }[session] || session;
-  return `${label} · ${exerciseName(exId)}`;
+  return `${sessionLabel(session)} · ${exerciseName(exId)}`;
 }
 
 function openTimerConflictPrompt(otherTimers, targetExerciseId, proceedFn) {
@@ -689,17 +758,25 @@ function fmtIST(ts) {
 }
 
 // -------- Day swap / move --------
-// When user taps "Move / Swap this day", we enter swap-mode: banner appears on
-// the calendar, all cells become pickable, and tapping a target opens a
-// confirmation with Swap / Move options.
-let daySwapSourceDate = null;
+// Day-picking mode. Entered from the day panel; a banner appears on the calendar,
+// every cell becomes pickable, and tapping a target opens the relevant confirm
+// dialog. Two kinds:
+//   { kind: "swap", srcDate }                          → swap/move a whole day
+//   { kind: "copy", srcDate, scope, session }          → copy a day or one session
+let calPickMode = null;
+// Back-compat alias used by the cell painter/banner.
+function pickSourceDate() { return calPickMode ? calPickMode.srcDate : null; }
 
 function enterSwapMode(container, srcDate) {
-  daySwapSourceDate = srcDate;
+  calPickMode = { kind: "swap", srcDate };
+  renderCalendar(container);
+}
+function enterCopyMode(container, srcDate, scope, session) {
+  calPickMode = { kind: "copy", srcDate, scope: scope || "day", session: session || null };
   renderCalendar(container);
 }
 function exitSwapMode(container) {
-  daySwapSourceDate = null;
+  calPickMode = null;
   renderCalendar(container);
 }
 
@@ -806,6 +883,226 @@ function moveDay(srcDate, dstDate) {
       else delete data.stopwatch[dstDate];
       delete data.stopwatch[srcDate];
     }
+  });
+}
+
+// -------- Copy a day (or one session) to another day --------
+// Copies the PLAN only — logged sets and stopwatch times stay with the original
+// day, since those record what actually happened.
+function copyDayPlan(srcDate, dstDate, { scope, session, merge }) {
+  save(data => {
+    const srcPlan = data.plans[srcDate];
+    if (!srcPlan) return;
+
+    if (scope === "session") {
+      const srcIds = planSessionIds(srcPlan, session);
+      if (!srcIds.length) return;
+      const dstPlan = data.plans[dstDate] || {};
+      const existing = merge ? planSessionIds(dstPlan, session) : [];
+      // Merge appends only exercises not already in that slot.
+      const combined = merge
+        ? existing.concat(srcIds.filter(id => !existing.includes(id)))
+        : srcIds;
+      const out = planSetSessionIds(dstPlan, session, combined);
+      if (!(out.title || "").trim() && (srcPlan.title || "").trim()) out.title = srcPlan.title;
+      data.plans[dstDate] = out;
+      return;
+    }
+
+    // Whole-day copy across all four sessions.
+    let out = merge ? { ...(data.plans[dstDate] || {}) } : {};
+    SESSION_KEYS.forEach(k => {
+      const srcIds = planSessionIds(srcPlan, k);
+      const existing = merge ? planSessionIds(data.plans[dstDate], k) : [];
+      const combined = merge
+        ? existing.concat(srcIds.filter(id => !existing.includes(id)))
+        : srcIds;
+      out = planSetSessionIds(out, k, combined);
+    });
+    out.title = merge && (out.title || "").trim() ? out.title : (srcPlan.title || "");
+    if (planIsEmpty(out)) delete data.plans[dstDate];
+    else data.plans[dstDate] = out;
+  });
+}
+
+function openCopyConfirm(container, mode, dstDate) {
+  const data = getData();
+  const { srcDate, scope, session } = mode;
+  const srcPlan = data.plans[srcDate];
+  const srcCount = scope === "session"
+    ? planSessionIds(srcPlan, session).length
+    : planExerciseCount(srcPlan);
+  const dstCount = scope === "session"
+    ? planSessionIds(data.plans[dstDate], session).length
+    : planExerciseCount(data.plans[dstDate]);
+
+  if (srcCount === 0) {
+    openModal({
+      title: "Nothing to copy",
+      body: `<p>${scope === "session" ? `The <b>${sessionLabel(session)}</b> slot on` : ""} <b>${formatFriendlyDate(srcDate)}</b> has no planned exercises.</p>`,
+      actions: [{ label: "OK", className: "btn-primary", onClick: (close) => { close(); exitSwapMode(container); } }],
+    });
+    return;
+  }
+
+  const what = scope === "session" ? `${sessionLabel(session)} workout` : "whole day";
+  const actions = [];
+  if (dstCount > 0) {
+    actions.push({
+      label: "Merge in",
+      className: "btn-primary",
+      onClick: (close) => {
+        copyDayPlan(srcDate, dstDate, { scope, session, merge: true });
+        close();
+        exitSwapMode(container);
+        renderDayPanel(container, dstDate);
+      },
+    });
+    actions.push({
+      label: "Replace",
+      className: "btn-danger",
+      onClick: (close) => {
+        copyDayPlan(srcDate, dstDate, { scope, session, merge: false });
+        close();
+        exitSwapMode(container);
+        renderDayPanel(container, dstDate);
+      },
+    });
+  } else {
+    actions.push({
+      label: "⧉ Copy here",
+      className: "btn-primary",
+      onClick: (close) => {
+        copyDayPlan(srcDate, dstDate, { scope, session, merge: false });
+        close();
+        exitSwapMode(container);
+        renderDayPanel(container, dstDate);
+      },
+    });
+  }
+  actions.push({ label: "Cancel" });
+
+  openModal({
+    title: "Copy workout",
+    body: `
+      <div class="swap-summary">
+        <div><b>${formatFriendlyDate(srcDate)}</b><span>${srcCount} planned</span></div>
+        <div class="swap-arrow">⧉→</div>
+        <div><b>${formatFriendlyDate(dstDate)}</b><span>${dstCount} planned</span></div>
+      </div>
+      <p class="swap-hint">
+        Copying the <b>${what}</b> plan. Logged sets and stopwatch times stay on the original day.
+        ${dstCount > 0
+          ? `<br><b>Merge in</b> adds the exercises alongside what's already there.
+             <span class="warn">Replace overwrites the target plan.</span>`
+          : ""}
+      </p>
+    `,
+    actions,
+  });
+}
+
+// -------- Swap / move workouts between slots within one day --------
+function swapSessions(dateStr, a, b) {
+  if (a === b) return;
+  save(data => {
+    const plan = data.plans[dateStr];
+    if (plan) {
+      const idsA = planSessionIds(plan, a);
+      const idsB = planSessionIds(plan, b);
+      let out = planSetSessionIds(plan, a, idsB);
+      out = planSetSessionIds(out, b, idsA);
+      if (planIsEmpty(out)) delete data.plans[dateStr];
+      else data.plans[dateStr] = out;
+    }
+    // Re-tag this day's logs (legacy logs with no session count as morning)
+    const TMP = "__sess_tmp__";
+    data.logs.forEach(l => {
+      if (l.date !== dateStr) return;
+      const s = l.session || "morning";
+      if (s === a) l.session = TMP;
+    });
+    data.logs.forEach(l => {
+      if (l.date !== dateStr) return;
+      const s = l.session || "morning";
+      if (s === b) l.session = a;
+    });
+    data.logs.forEach(l => { if (l.date === dateStr && l.session === TMP) l.session = b; });
+    // Swap the two stopwatch records
+    _swWrite(data, dateStr, a, day => {
+      const ra = day[a], rb = day[b];
+      if (rb) day[a] = rb; else delete day[a];
+      if (ra) day[b] = ra; else delete day[b];
+    });
+  });
+}
+
+function moveSession(dateStr, from, to) {
+  if (from === to) return;
+  save(data => {
+    const plan = data.plans[dateStr];
+    if (plan) {
+      const ids = planSessionIds(plan, from);
+      let out = planSetSessionIds(plan, to, ids);
+      out = planSetSessionIds(out, from, []);
+      if (planIsEmpty(out)) delete data.plans[dateStr];
+      else data.plans[dateStr] = out;
+    }
+    // Drop whatever was logged in the target slot, then re-tag the source's logs
+    data.logs = data.logs.filter(l => !(l.date === dateStr && (l.session || "morning") === to));
+    data.logs.forEach(l => {
+      if (l.date === dateStr && (l.session || "morning") === from) l.session = to;
+    });
+    _swWrite(data, dateStr, from, day => {
+      if (day[from]) day[to] = day[from]; else delete day[to];
+      delete day[from];
+    });
+  });
+}
+
+// Modal listing the other three slots, each with Swap / Move buttons.
+function openSessionMoveDialog(dateStr, fromSession, onDone) {
+  const data = getData();
+  const plan = data.plans[dateStr];
+  const counts = {};
+  SESSION_KEYS.forEach(k => {
+    counts[k] = {
+      planned: planSessionIds(plan, k).length,
+      logged: data.logs.filter(l => l.date === dateStr && (l.session || "morning") === k).length,
+    };
+  });
+
+  const rows = SESSION_KEYS.filter(k => k !== fromSession).map(k => `
+    <div class="session-move-row" data-target="${k}">
+      <span class="session-move-name">${SESSION_META[k].icon} ${sessionLabel(k)}</span>
+      <span class="session-move-count">${counts[k].planned} planned${counts[k].logged ? ` · ${counts[k].logged} logged` : ""}</span>
+      <span class="session-move-actions">
+        <button class="btn btn-ghost btn-xs" data-act="swap" data-target="${k}">↔ Swap</button>
+        <button class="btn btn-ghost btn-xs" data-act="move" data-target="${k}">→ Move</button>
+      </span>
+    </div>
+  `).join("");
+
+  const close = openModal({
+    title: `Move ${sessionLabel(fromSession)} workout`,
+    body: `
+      <p><b>${SESSION_META[fromSession].icon} ${sessionLabel(fromSession)}</b> —
+      ${counts[fromSession].planned} planned${counts[fromSession].logged ? `, ${counts[fromSession].logged} logged` : ""}.
+      Pick a slot on the same day:</p>
+      <div class="session-move-list">${rows}</div>
+      <p class="swap-hint"><b>Swap</b> exchanges the two slots. <b>Move</b> <span class="warn">overwrites the target slot.</span></p>
+    `,
+    actions: [{ label: "Cancel" }],
+  });
+
+  document.querySelectorAll(".session-move-row [data-act]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.target;
+      if (btn.dataset.act === "swap") swapSessions(dateStr, fromSession, target);
+      else moveSession(dateStr, fromSession, target);
+      close();
+      if (onDone) onDone(target);
+    });
   });
 }
 
