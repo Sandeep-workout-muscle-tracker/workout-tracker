@@ -22,6 +22,15 @@ GitHub repo as the database. Installable on your phone as a full-screen app.
 
 ### 📅 Calendar
 - Plan any day: add exercises from every category, give the day a label.
+- **Four sessions a day** — Morning / Afternoon / Evening / Night, each with its own
+  plan, its own stopwatch and its own logs. Tabs show planned counts and a ✓ badge
+  once you've logged something in that slot.
+- **Move a slot** — swap or move a workout between slots on the same day
+  (e.g. shift Morning to Evening) — plan, logs and stopwatch all travel together.
+- **Copy a workout** — "⧉ Copy day to…" duplicates a whole day's plan onto another
+  date, or "⧉ Copy slot to…" copies just one session. If the target already has
+  something, choose Merge (adds without duplicating) or Replace. Logged sets and
+  stopwatch times stay with the original day.
 - **Three-section plan** — Warmup / Main Workout / Cooldown, each with independent
   serial numbering and color-coded borders (blue / orange / green).
 - **Reordering made easy** — ▲▼ nudge buttons, or tap any serial number to open a
