@@ -130,13 +130,16 @@ function renderExercisePicker(selectedSub) {
  * @param {string} presetDate - default date (YYYY-MM-DD)
  * @param {string|null} editLogId - if provided, drawer opens in edit mode for that log
  */
-function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
+function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId, sessionKey) {
   const isEdit = !!editLogId;
+  // Timers and drafts are scoped per session so the same exercise can be logged
+  // in Morning and Evening independently.
+  const tKey = sessionKey ? sessionKey + ":" + exerciseId : exerciseId;
   const existing = isEdit ? getData().logs.find(l => l.id === editLogId) : null;
   const name = exerciseName(exerciseId);
   const dateValue = existing?.date || presetDate || todayStr();
   // Prefer draft (from a prior Back) over defaults in non-edit mode
-  const draft = isEdit ? null : getExDraft(exerciseId);
+  const draft = isEdit ? null : getExDraft(tKey);
   const initialSets = draft?.sets?.length
     ? draft.sets
     : (existing?.sets?.length ? existing.sets : [{ weight: "", reps: "" }, { weight: "", reps: "" }]);
@@ -148,7 +151,7 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   // If a timer is already running for this exercise (e.g. user hit Back earlier),
   // don't restart — just show its accumulated time.
   if (!isEdit) {
-    startExTimer(exerciseId, presetDate || todayStr());
+    startExTimer(tKey, presetDate || todayStr());
   }
 
   container.innerHTML = `
@@ -227,15 +230,15 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
     if (!isEdit) {
       const sets = readSetsFromDom();
       const note = container.querySelector("#log-note").value;
-      saveExDraft(exerciseId, sets, note);
+      saveExDraft(tKey, sets, note);
     }
     container.innerHTML = "";
     if (onSaved) onSaved();
   }
   function fullCancel() {
     if (!isEdit) {
-      stopExTimer(exerciseId);
-      clearExDraft(exerciseId);
+      stopExTimer(tKey);
+      clearExDraft(tKey);
     }
     container.innerHTML = "";
     if (onSaved) onSaved();
@@ -256,9 +259,9 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
     if (sets.length === 0) { alert("Add at least one set with a weight or rep count."); return; }
 
     // Snapshot & stop the exercise timer BEFORE we save so we can attach duration.
-    const durationSec = isEdit ? null : stopExTimer(exerciseId);
+    const durationSec = isEdit ? null : stopExTimer(tKey);
     // Clear the draft — this log is now committed.
-    if (!isEdit) clearExDraft(exerciseId);
+    if (!isEdit) clearExDraft(tKey);
 
     if (isEdit) {
       save(data => {
@@ -269,7 +272,7 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
       });
     } else {
       save(data => {
-        data.logs.push({ id: uid(), date, exerciseId, sets, note, durationSec });
+        data.logs.push({ id: uid(), date, exerciseId, sets, note, durationSec, session: sessionKey || null });
       });
     }
     container.innerHTML = "";
@@ -282,10 +285,10 @@ function renderLogForm(container, exerciseId, onSaved, presetDate, editLogId) {
   if (!isEdit) {
     const timerEl = container.querySelector("#log-drawer-timer");
     if (timerEl) {
-      timerEl.textContent = `⏱ ${fmtDuration(getExTimerSeconds(exerciseId))}`;
+      timerEl.textContent = `⏱ ${fmtDuration(getExTimerSeconds(tKey))}`;
       const unsubscribe = onExTimerTick(() => {
         if (!timerEl.isConnected) { unsubscribe(); return; }
-        timerEl.textContent = `⏱ ${fmtDuration(getExTimerSeconds(exerciseId))}`;
+        timerEl.textContent = `⏱ ${fmtDuration(getExTimerSeconds(tKey))}`;
       });
     }
   }
