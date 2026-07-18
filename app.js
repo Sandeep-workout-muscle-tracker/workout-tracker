@@ -48,10 +48,6 @@ function renderShell() {
           <div class="brand-sub">personal lifting grimoire</div>
         </button>
         <div class="nav-list" id="nav-list">
-          <div class="nav-list-header">
-            <span>Navigate</span>
-            <button class="btn-icon" id="nav-close" title="Close">×</button>
-          </div>
           ${VIEWS.map(v => `
             <button class="nav-item ${v.id === currentView ? "active" : ""}" data-view="${v.id}">
               <span class="nav-icon">${v.icon}</span>${v.label}
@@ -63,10 +59,6 @@ function renderShell() {
         </div>
         <div class="nav-tools">
           <button class="theme-toggle" id="theme-toggle" title="Switch theme">☀</button>
-          <button class="nav-menu-btn" id="nav-menu-btn" title="Menu" aria-expanded="false">
-            <span class="nav-menu-label" id="nav-menu-label">Menu</span>
-            <span class="nav-menu-icon">☰</span>
-          </button>
         </div>
         <div class="sync-indicator" id="sync-indicator">
           <span class="sync-dot" id="sync-dot"></span>
@@ -76,6 +68,9 @@ function renderShell() {
       <main class="main-panel" id="main-panel"></main>
     </div>
     <div class="nav-backdrop" id="nav-backdrop"></div>
+    <button class="nav-fab" id="nav-menu-btn" aria-expanded="false" aria-label="Open menu">
+      <span class="nav-fab-icon"></span>
+    </button>
     <div id="global-log-modal-slot"></div>
   `;
 
@@ -93,9 +88,8 @@ function renderShell() {
     closeNavMenu();
   });
 
-  // Mobile: the nav list is a floating panel toggled by the Menu button.
+  // Mobile: the nav list is a floating panel toggled by the round button.
   document.getElementById("nav-menu-btn").addEventListener("click", toggleNavMenu);
-  document.getElementById("nav-close").addEventListener("click", closeNavMenu);
   document.getElementById("nav-backdrop").addEventListener("click", closeNavMenu);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeNavMenu();
@@ -113,20 +107,23 @@ function renderShell() {
 function isNavOpen() { return document.body.classList.contains("nav-open"); }
 function openNavMenu() {
   document.body.classList.add("nav-open");
-  document.getElementById("nav-menu-btn")?.setAttribute("aria-expanded", "true");
+  const btn = document.getElementById("nav-menu-btn");
+  if (btn) { btn.setAttribute("aria-expanded", "true"); btn.setAttribute("aria-label", "Close menu"); }
 }
 function closeNavMenu() {
   document.body.classList.remove("nav-open");
-  document.getElementById("nav-menu-btn")?.setAttribute("aria-expanded", "false");
+  const btn = document.getElementById("nav-menu-btn");
+  if (btn) { btn.setAttribute("aria-expanded", "false"); updateNavMenuLabel(); }
 }
 function toggleNavMenu() { isNavOpen() ? closeNavMenu() : openNavMenu(); }
 
-// Keep the Menu button labelled with wherever you currently are.
+// The round button is icon-only, so keep its accessible name pointing at the
+// current view: "Menu — Calendar".
 function updateNavMenuLabel() {
-  const el = document.getElementById("nav-menu-label");
-  if (!el) return;
+  const btn = document.getElementById("nav-menu-btn");
+  if (!btn || isNavOpen()) return;
   const v = VIEWS.find(v => v.id === currentView);
-  el.textContent = v ? v.label : "Menu";
+  btn.setAttribute("aria-label", v ? `Menu — currently on ${v.label}` : "Open menu");
 }
 
 // Switch views WITHOUT rebuilding the sidenav — this preserves the horizontal
