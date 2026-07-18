@@ -43,17 +43,31 @@ function renderShell() {
   document.body.innerHTML = `
     <div class="app-shell">
       <nav class="sidenav">
-        <div class="brand">
+        <button class="brand" id="brand-home" title="Go to Dashboard">
           <div class="brand-mark">IRONOMICON</div>
           <div class="brand-sub">personal lifting grimoire</div>
-        </div>
-        <div class="nav-list">
+        </button>
+        <div class="nav-list" id="nav-list">
+          <div class="nav-list-header">
+            <span>Navigate</span>
+            <button class="btn-icon" id="nav-close" title="Close">×</button>
+          </div>
           ${VIEWS.map(v => `
             <button class="nav-item ${v.id === currentView ? "active" : ""}" data-view="${v.id}">
               <span class="nav-icon">${v.icon}</span>${v.label}
             </button>`).join("")}
+          <div class="sync-indicator nav-list-sync" id="sync-indicator-mobile">
+            <span class="sync-dot" id="sync-dot-mobile"></span>
+            <span id="sync-text-mobile">…</span>
+          </div>
         </div>
-        <button class="theme-toggle" id="theme-toggle" title="Switch theme">☀</button>
+        <div class="nav-tools">
+          <button class="theme-toggle" id="theme-toggle" title="Switch theme">☀</button>
+          <button class="nav-menu-btn" id="nav-menu-btn" title="Menu" aria-expanded="false">
+            <span class="nav-menu-label" id="nav-menu-label">Menu</span>
+            <span class="nav-menu-icon">☰</span>
+          </button>
+        </div>
         <div class="sync-indicator" id="sync-indicator">
           <span class="sync-dot" id="sync-dot"></span>
           <span id="sync-text">…</span>
@@ -61,19 +75,58 @@ function renderShell() {
       </nav>
       <main class="main-panel" id="main-panel"></main>
     </div>
+    <div class="nav-backdrop" id="nav-backdrop"></div>
     <div id="global-log-modal-slot"></div>
   `;
 
   document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.addEventListener("click", () => switchToView(btn.dataset.view));
+    btn.addEventListener("click", () => {
+      switchToView(btn.dataset.view);
+      closeNavMenu();
+    });
   });
   document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
+
+  // Tapping the wordmark always returns to the Dashboard.
+  document.getElementById("brand-home").addEventListener("click", () => {
+    switchToView("dashboard");
+    closeNavMenu();
+  });
+
+  // Mobile: the nav list is a floating panel toggled by the Menu button.
+  document.getElementById("nav-menu-btn").addEventListener("click", toggleNavMenu);
+  document.getElementById("nav-close").addEventListener("click", closeNavMenu);
+  document.getElementById("nav-backdrop").addEventListener("click", closeNavMenu);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeNavMenu();
+  });
 
   // Sync the toggle icon with whatever theme boot script applied
   applyTheme(currentTheme());
 
+  updateNavMenuLabel();
   updateSyncIndicator(lastSyncStatus, lastSyncDetail);
   renderView();
+}
+
+// ---------------- MOBILE NAV MENU ----------------
+function isNavOpen() { return document.body.classList.contains("nav-open"); }
+function openNavMenu() {
+  document.body.classList.add("nav-open");
+  document.getElementById("nav-menu-btn")?.setAttribute("aria-expanded", "true");
+}
+function closeNavMenu() {
+  document.body.classList.remove("nav-open");
+  document.getElementById("nav-menu-btn")?.setAttribute("aria-expanded", "false");
+}
+function toggleNavMenu() { isNavOpen() ? closeNavMenu() : openNavMenu(); }
+
+// Keep the Menu button labelled with wherever you currently are.
+function updateNavMenuLabel() {
+  const el = document.getElementById("nav-menu-label");
+  if (!el) return;
+  const v = VIEWS.find(v => v.id === currentView);
+  el.textContent = v ? v.label : "Menu";
 }
 
 // Switch views WITHOUT rebuilding the sidenav — this preserves the horizontal
@@ -85,6 +138,7 @@ function switchToView(viewId) {
   document.querySelectorAll(".nav-item").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.view === viewId);
   });
+  updateNavMenuLabel();
   renderView();
   // Scroll the main content to the top on nav change (nice UX touch)
   window.scrollTo(0, 0);
@@ -396,9 +450,6 @@ function renderSettingsView(panel) {
 
 // ---------------- BOOT ----------------
 function updateSyncIndicator(status, detail) {
-  const dot = el("sync-dot");
-  const text = el("sync-text");
-  if (!dot || !text) return;
   const map = {
     "syncing": ["sync-syncing", "Syncing…"],
     "synced": ["sync-ok", "Synced"],
@@ -407,8 +458,15 @@ function updateSyncIndicator(status, detail) {
     "local-only": ["sync-local", "Local only — set up sync"],
   };
   const [cls, label] = map[status] || ["sync-local", status];
-  dot.className = "sync-dot " + cls;
-  text.textContent = label;
+  // Two copies exist: the desktop sidebar one and the one inside the mobile
+  // floating nav panel. Update whichever are present.
+  [["sync-dot", "sync-text"], ["sync-dot-mobile", "sync-text-mobile"]].forEach(([dotId, textId]) => {
+    const dot = el(dotId);
+    const text = el(textId);
+    if (!dot || !text) return;
+    dot.className = "sync-dot " + cls;
+    text.textContent = label;
+  });
 }
 
 onSyncStatus((status, detail) => {
