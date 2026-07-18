@@ -2,6 +2,7 @@
 // Green = logged. Amber = planned but not yet done. Neutral = free day.
 
 let calCursor = new Date();
+let selectedDayDate = null;   // date currently open in the day panel
 
 function fmtDate(y, m, d) {
   const mm = String(m + 1).padStart(2, "0");
@@ -86,6 +87,7 @@ function paintCells(container, y, m, startDow, daysInMonth) {
     if (dateStr === today) cellClass += " cal-today";
     if (hasLogs) cellClass += " cal-logged";
     else if (hasPlan) cellClass += " cal-planned";
+    if (dateStr === selectedDayDate) cellClass += " cal-selected";
     if (inSwap && dateStr === daySwapSourceDate) cellClass += " cal-swap-source";
 
     cells += `
@@ -133,21 +135,49 @@ function renderDayPanel(container, dateStr) {
   const panel = container.querySelector("#cal-day-panel");
   const modalSlot = container.querySelector("#cal-log-modal-slot");
   const data = getData();
-  const plan = data.plans[dateStr] || { title: "", exerciseIds: [], warmup: "", cooldown: "" };
-  let exerciseIds = [...(plan.exerciseIds || [])];
+  const plan = data.plans[dateStr] || {};
+
+  // ---- Sessions: three fixed slots per day ----
+  // Normalize: legacy plans stored a flat exerciseIds array → treat as Morning.
+  const SESSION_KEYS = ["morning", "afternoon", "evening"];
+  const SESSION_META = {
+    morning:   { label: "Morning",   icon: "🌅" },
+    afternoon: { label: "Afternoon", icon: "🌤" },
+    evening:   { label: "Evening",   icon: "🌙" },
+  };
+  const sessions = {};
+  SESSION_KEYS.forEach(k => {
+    sessions[k] = [...((plan.sessions && plan.sessions[k] && plan.sessions[k].exerciseIds) || [])];
+  });
+  if (!plan.sessions && Array.isArray(plan.exerciseIds) && plan.exerciseIds.length) {
+    sessions.morning = [...plan.exerciseIds];
+  }
+
+  // Active session: default to the first slot with exercises, else Morning.
+  let activeSession = SESSION_KEYS.find(k => sessions[k].length > 0) || "morning";
   let selectedGroups = [];
+
+  // Mark this day as selected on the calendar grid
+  selectedDayDate = dateStr;
+  refreshMonthCells(container);
+
+  // Session attribution for logs: legacy logs (no .session) count as Morning.
+  function logSession(l) { return l.session || "morning"; }
+  function timerKey(sessionKey, exId) { return sessionKey + ":" + exId; }
 
   panel.innerHTML = `
     <div class="day-panel">
       <div class="day-panel-title">${formatFriendlyDate(dateStr)}</div>
       <div class="muted">Anything you change here saves automatically.</div>
 
-      <div id="stopwatch-slot"></div>
-
-      <label class="field-label" style="margin-top: 20px;">Plan label</label>
+      <label class="field-label" style="margin-top: 16px;">Plan label</label>
       <input type="text" id="plan-title" class="input" placeholder="e.g. Push — Chest &amp; Shoulders" value="${escapeAttr(plan.title || "")}" />
 
-      <div class="day-panel-subtitle">Browse &amp; Add Exercises</div>
+      <div class="session-tabs" id="session-tabs"></div>
+
+      <div id="stopwatch-slot"></div>
+
+      <div class="day-panel-subtitle">Browse &amp; Add Exercises <span class="session-target-hint" id="session-target-hint"></span></div>
       <div class="group-chip-row" id="group-chip-row">
         ${Object.entries(MUSCLE_GROUPS).map(([gid, g]) => `
           <button class="group-chip" data-group="${gid}">${g.label}</button>
@@ -167,29 +197,58 @@ function renderDayPanel(container, dateStr) {
     </div>
   `;
 
-  renderStopwatch(panel.querySelector("#stopwatch-slot"), dateStr);
-
-  // Auto-save the plan label on change
-  ["plan-title"].forEach(id => {
-    panel.querySelector(`#${id}`).addEventListener("input", saveDayPlan);
-  });
+  panel.querySelector("#plan-title").addEventListener("input", saveDayPlan);
 
   function saveDayPlan() {
     const title = panel.querySelector("#plan-title").value;
     autoSave(data => {
-      const existing = data.plans[dateStr] || {};
-      if (!exerciseIds.length && !title.trim()) {
+      const anyExercises = SESSION_KEYS.some(k => sessions[k].length > 0);
+      if (!anyExercises && !title.trim()) {
         delete data.plans[dateStr];
       } else {
-        // Preserve any legacy warmup/cooldown strings on the plan so we don't
-        // silently lose data the user typed in an earlier build.
-        data.plans[dateStr] = {
-          ...existing,
-          title,
-          exerciseIds,
-        };
+        const existing = data.plans[dateStr] || {};
+        const out = { ...existing, title, sessions: {} };
+        SESSION_KEYS.forEach(k => { out.sessions[k] = { exerciseIds: [...sessions[k]] }; });
+        delete out.exerciseIds; // retire legacy flat list
+        data.plans[dateStr] = out;
       }
     });
+  }
+
+  function renderSessionTabs() {
+    const el = panel.querySelector("#session-tabs");
+    const logsToday = getData().logs.filter(l => l.date === dateStr);
+    el.innerHTML = SESSION_KEYS.map(k => {
+      const count = sessions[k].length;
+      const loggedCount = logsToday.filter(l => logSession(l) === k).length;
+      return `
+        <button class="session-tab ${k === activeSession ? "active" : ""} ${loggedCount > 0 ? "has-logs" : ""}" data-session="${k}">
+          <span class="session-tab-icon">${SESSION_META[k].icon}</span>
+          <span>${SESSION_META[k].label}</span>
+          ${count ? `<span class="session-tab-count">${count}</span>` : ""}
+          ${loggedCount ? `<span class="session-tab-done">✓${loggedCount}</span>` : ""}
+        </button>`;
+    }).join("");
+    el.querySelectorAll(".session-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activeSession = btn.dataset.session;
+        renderSessionTabs();
+        renderSessionStopwatch();
+        renderTargetHint();
+        renderBrowseSections();
+        renderPlanList();
+        renderExistingLogs();
+      });
+    });
+  }
+
+  function renderTargetHint() {
+    const el = panel.querySelector("#session-target-hint");
+    el.textContent = "→ adds to " + SESSION_META[activeSession].label;
+  }
+
+  function renderSessionStopwatch() {
+    renderStopwatch(panel.querySelector("#stopwatch-slot"), dateStr, activeSession, SESSION_META[activeSession].label);
   }
 
   // Given an exerciseId, return which of the 3 workout sections it belongs to.
@@ -207,29 +266,65 @@ function renderDayPanel(container, dateStr) {
     return "main";
   }
 
-  // Split exerciseIds into 3 sub-arrays (warmup / main / cooldown) preserving
-  // the relative order within each. Returns { sections, rebuild } — call
-  // rebuild() after mutating the sub-arrays to flatten back into exerciseIds.
   function computeSections() {
-    const sections = { warmup: [], main: [], cooldown: [] };
-    exerciseIds.forEach(id => { sections[categorizeEx(id)].push(id); });
-    return sections;
+    const secs = { warmup: [], main: [], cooldown: [] };
+    sessions[activeSession].forEach(id => { secs[categorizeEx(id)].push(id); });
+    return secs;
   }
-  function rebuildFromSections(sections) {
-    exerciseIds = [...sections.warmup, ...sections.main, ...sections.cooldown];
+  function rebuildFromSections(secs) {
+    sessions[activeSession] = [...secs.warmup, ...secs.main, ...secs.cooldown];
+  }
+
+  function renderBrowseSections() {
+    const el2 = panel.querySelector("#browse-sections");
+    if (selectedGroups.length === 0) { el2.innerHTML = ""; return; }
+    const current = sessions[activeSession];
+    el2.innerHTML = selectedGroups.map(gid => {
+      const g = MUSCLE_GROUPS[gid];
+      return `
+        <div class="browse-group">
+          <div class="browse-group-title">${g.label}</div>
+          ${g.subs.map(sub => `
+            <div class="browse-sub-row">
+              <div class="browse-sub-label">${SUBMUSCLE_LABELS[sub]}</div>
+              <div class="browse-sub-exercises">
+                ${(EXERCISES_BY_SUB[sub] || []).map(e => `
+                  <button class="ex-chip-add ${current.includes(e.id) ? "added" : ""}" data-id="${e.id}">
+                    ${e.name} <span class="ex-chip-equip">${EQUIP_LABELS[e.equip]}</span>
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }).join("");
+    el2.querySelectorAll(".ex-chip-add").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const arr = sessions[activeSession];
+        if (arr.includes(id)) sessions[activeSession] = arr.filter(x => x !== id);
+        else arr.push(id);
+        saveDayPlan();
+        renderBrowseSections();
+        renderPlanList();
+        renderSessionTabs();
+        refreshMonthCells(container);
+      });
+    });
   }
 
   function renderPlanList() {
     const list = panel.querySelector("#plan-ex-list");
-    const logsToday = getData().logs.filter(l => l.date === dateStr);
+    const logsToday = getData().logs.filter(l => l.date === dateStr && logSession(l) === activeSession);
     const loggedExIds = new Set(logsToday.map(l => l.exerciseId));
 
-    if (exerciseIds.length === 0) {
-      list.innerHTML = `<div class="empty-state-small">No exercises added yet. Pick a muscle group above.</div>`;
+    if (sessions[activeSession].length === 0) {
+      list.innerHTML = `<div class="empty-state-small">No exercises in the ${SESSION_META[activeSession].label} session yet. Pick a muscle group above.</div>`;
       return;
     }
 
-    const sections = computeSections();
+    const secs = computeSections();
     const meta = [
       { key: "warmup",   label: "Warmup" },
       { key: "main",     label: "Main Workout" },
@@ -238,10 +333,10 @@ function renderDayPanel(container, dateStr) {
 
     function renderRow(id, idx, sectionLen, sectionKey) {
       const done = loggedExIds.has(id);
-      // Total time already logged today for this exercise (sum across "Log again" entries)
       const totalSec = logsToday
         .filter(l => l.exerciseId === id)
         .reduce((sum, l) => sum + (l.durationSec || 0), 0);
+      const tKey = timerKey(activeSession, id);
       return `
         <div class="plan-ex-chip ${done ? "done" : ""}" data-id="${id}" data-section="${sectionKey}">
           <button class="plan-ex-serial editable" data-idx="${idx}" data-section="${sectionKey}" title="Tap to change position within ${sectionKey}">${idx + 1}</button>
@@ -250,7 +345,7 @@ function renderDayPanel(container, dateStr) {
             <button class="btn-icon reorder-down" data-idx="${idx}" data-section="${sectionKey}" title="Move down" ${idx === sectionLen - 1 ? "disabled" : ""}>▼</button>
           </span>
           <span class="plan-ex-name">${exerciseName(id)}</span>
-          <span class="plan-ex-timer" data-ex-timer="${id}">${totalSec ? `⏱ ${fmtDuration(totalSec)}` : ""}</span>
+          <span class="plan-ex-timer" data-ex-timer="${tKey}">${totalSec ? `⏱ ${fmtDuration(totalSec)}` : ""}</span>
           ${done ? `<span class="day-log-status">✓ Done</span>` : ""}
           <button class="btn btn-small log-btn ${done ? "btn-good" : "btn-primary"}" data-id="${id}">${done ? "Log again" : "Log sets"}</button>
           <span class="remove-x" data-action="remove" data-id="${id}" title="Remove from plan">×</span>
@@ -259,7 +354,7 @@ function renderDayPanel(container, dateStr) {
     }
 
     list.innerHTML = meta.map(m => {
-      const ids = sections[m.key];
+      const ids = secs[m.key];
       if (ids.length === 0) return "";
       return `
         <div class="plan-section plan-section-${m.key}">
@@ -272,34 +367,31 @@ function renderDayPanel(container, dateStr) {
       `;
     }).join("");
 
-    // Serial number → inline position edit popover (scoped to its section)
     list.querySelectorAll(".plan-ex-serial.editable").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const sectionKey = btn.dataset.section;
-        const idx = parseInt(btn.dataset.idx, 10);
-        openSerialEditor(btn, idx, sections, sectionKey);
+        openSerialEditor(btn, parseInt(btn.dataset.idx, 10), secs, btn.dataset.section);
       });
     });
 
     list.querySelectorAll("[data-action='remove']").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        exerciseIds = exerciseIds.filter(id => id !== btn.dataset.id);
+        sessions[activeSession] = sessions[activeSession].filter(id => id !== btn.dataset.id);
         saveDayPlan();
         renderPlanList();
         renderBrowseSections();
+        renderSessionTabs();
         refreshMonthCells(container);
       });
     });
     list.querySelectorAll(".reorder-up").forEach(btn => {
       btn.addEventListener("click", () => {
-        const sectionKey = btn.dataset.section;
-        const arr = sections[sectionKey];
+        const arr = secs[btn.dataset.section];
         const i = parseInt(btn.dataset.idx, 10);
         if (i > 0) {
           [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
-          rebuildFromSections(sections);
+          rebuildFromSections(secs);
           saveDayPlan();
           renderPlanList();
         }
@@ -307,12 +399,11 @@ function renderDayPanel(container, dateStr) {
     });
     list.querySelectorAll(".reorder-down").forEach(btn => {
       btn.addEventListener("click", () => {
-        const sectionKey = btn.dataset.section;
-        const arr = sections[sectionKey];
+        const arr = secs[btn.dataset.section];
         const i = parseInt(btn.dataset.idx, 10);
         if (i < arr.length - 1) {
           [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
-          rebuildFromSections(sections);
+          rebuildFromSections(secs);
           saveDayPlan();
           renderPlanList();
         }
@@ -321,17 +412,17 @@ function renderDayPanel(container, dateStr) {
     list.querySelectorAll(".log-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const targetId = btn.dataset.id;
+        const tKey = timerKey(activeSession, targetId);
         const openDrawer = () => renderLogForm(modalSlot, targetId, () => {
           modalSlot.innerHTML = "";
           renderExistingLogs();
           renderPlanList();
+          renderSessionTabs();
           refreshMonthCells(container);
-        }, dateStr);
+        }, dateStr, null, activeSession);
 
-        // If timers are already running for OTHER exercises (user hit Back earlier),
-        // ask what to do before starting a new one.
-        const others = listActiveExTimers().filter(t => t.exerciseId !== targetId);
-        if (others.length > 0 && !hasExTimer(targetId)) {
+        const others = listActiveExTimers().filter(t => t.exerciseId !== tKey);
+        if (others.length > 0 && !hasExTimer(tKey)) {
           openTimerConflictPrompt(others, targetId, openDrawer);
           return;
         }
@@ -339,15 +430,12 @@ function renderDayPanel(container, dateStr) {
       });
     });
 
-    // Live timer chip update: on each tick, find the row for the active exercise
-    // and inject the current running time. Static durations for finished
-    // exercises are already rendered above.
     onExTimerTick(() => {
       if (!list.isConnected) return;
       list.querySelectorAll("[data-ex-timer]").forEach(span => {
-        const exId = span.dataset.exTimer;
-        if (hasExTimer(exId)) {
-          span.textContent = `⏱ ${fmtDuration(getExTimerSeconds(exId))}`;
+        const key = span.dataset.exTimer;
+        if (hasExTimer(key)) {
+          span.textContent = `⏱ ${fmtDuration(getExTimerSeconds(key))}`;
           span.classList.add("running");
         } else {
           span.classList.remove("running");
@@ -356,13 +444,10 @@ function renderDayPanel(container, dateStr) {
     });
   }
 
-  // Popover-style inline editor for changing an exercise's position number
-  // WITHIN its section (warmup / main / cooldown). Serials are section-local.
-  function openSerialEditor(anchorEl, fromIdx, sections, sectionKey) {
-    // Close any existing popover first
+  function openSerialEditor(anchorEl, fromIdx, secs, sectionKey) {
     document.querySelectorAll(".serial-editor").forEach(el => el.remove());
 
-    const arr = sections[sectionKey];
+    const arr = secs[sectionKey];
     const total = arr.length;
     const sectionLabel = { warmup: "Warmup", main: "Main", cooldown: "Cooldown" }[sectionKey] || "";
     const popover = document.createElement("div");
@@ -380,7 +465,6 @@ function renderDayPanel(container, dateStr) {
         <button class="btn btn-ghost btn-xs" data-target="bottom" ${fromIdx === total - 1 ? "disabled" : ""}>⤓ Bottom</button>
       </div>
     `;
-    // Position it right below the tapped serial
     document.body.appendChild(popover);
     const rect = anchorEl.getBoundingClientRect();
     const popW = 240;
@@ -408,7 +492,7 @@ function renderDayPanel(container, dateStr) {
       if (toIdx === fromIdx) { close(); return; }
       const [item] = arr.splice(fromIdx, 1);
       arr.splice(toIdx, 0, item);
-      rebuildFromSections(sections);
+      rebuildFromSections(secs);
       saveDayPlan();
       close();
       renderPlanList();
@@ -437,56 +521,11 @@ function renderDayPanel(container, dateStr) {
     });
   }
 
-  function renderBrowseSections() {
-    const el2 = panel.querySelector("#browse-sections");
-    if (selectedGroups.length === 0) {
-      el2.innerHTML = "";
-      return;
-    }
-    el2.innerHTML = selectedGroups.map(gid => {
-      const g = MUSCLE_GROUPS[gid];
-      return `
-        <div class="browse-group">
-          <div class="browse-group-title">${g.label}</div>
-          ${g.subs.map(sub => `
-            <div class="browse-sub-row">
-              <div class="browse-sub-label">${SUBMUSCLE_LABELS[sub]}</div>
-              <div class="browse-sub-exercises">
-                ${(EXERCISES_BY_SUB[sub] || []).map(e => `
-                  <button class="ex-chip-add ${exerciseIds.includes(e.id) ? "added" : ""}" data-id="${e.id}">
-                    ${e.name} <span class="ex-chip-equip">${EQUIP_LABELS[e.equip]}</span>
-                  </button>
-                `).join("")}
-              </div>
-            </div>
-          `).join("")}
-        </div>
-      `;
-    }).join("");
-    el2.querySelectorAll(".ex-chip-add").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const id = btn.dataset.id;
-        if (exerciseIds.includes(id)) {
-          exerciseIds = exerciseIds.filter(x => x !== id);
-        } else {
-          exerciseIds.push(id);
-        }
-        saveDayPlan();
-        renderBrowseSections();
-        renderPlanList();
-        refreshMonthCells(container);
-      });
-    });
-  }
-
   function renderExistingLogs() {
     const el4 = panel.querySelector("#day-existing-logs");
-    const logsToday = getData().logs.filter(l => l.date === dateStr);
-    if (logsToday.length === 0) {
-      el4.innerHTML = "";
-      return;
-    }
-    el4.innerHTML = `<div class="field-label" style="margin-top:18px;">Logged sets</div>` + logsToday.map((l, idx) => `
+    const logsToday = getData().logs.filter(l => l.date === dateStr && logSession(l) === activeSession);
+    if (logsToday.length === 0) { el4.innerHTML = ""; return; }
+    el4.innerHTML = `<div class="field-label" style="margin-top:18px;">Logged sets — ${SESSION_META[activeSession].label}</div>` + logsToday.map((l, idx) => `
       <div class="history-row">
         <div class="history-date">${idx + 1}.</div>
         <div class="history-main">
@@ -507,6 +546,7 @@ function renderDayPanel(container, dateStr) {
         save(d => { d.logs = d.logs.filter(l => l.id !== btn.dataset.id); });
         renderExistingLogs();
         renderPlanList();
+        renderSessionTabs();
         refreshMonthCells(container);
       });
     });
@@ -516,6 +556,7 @@ function renderDayPanel(container, dateStr) {
           modalSlot.innerHTML = "";
           renderExistingLogs();
           renderPlanList();
+          renderSessionTabs();
           refreshMonthCells(container);
         }, dateStr, btn.dataset.id);
       });
@@ -539,6 +580,9 @@ function renderDayPanel(container, dateStr) {
   panel.querySelector("#clear-plan").addEventListener("click", () => {
     if (!confirm("Clear the plan for this day? (Logged sets are kept.)")) return;
     save(data => { delete data.plans[dateStr]; });
+    SESSION_KEYS.forEach(k => { sessions[k] = []; });
+    renderSessionTabs();
+    renderPlanList();
     refreshMonthCells(container);
   });
 
@@ -546,6 +590,9 @@ function renderDayPanel(container, dateStr) {
     enterSwapMode(container, dateStr);
   });
 
+  renderSessionTabs();
+  renderSessionStopwatch();
+  renderTargetHint();
   renderPlanList();
   renderBrowseSections();
   renderExistingLogs();
@@ -581,9 +628,20 @@ function openModal({ title, body, actions }) {
 }
 
 // -------- Timer conflict prompt --------
+// Timer keys are "session:exerciseId" (legacy keys have no colon). Split them so
+// the prompt can show "Morning · Bench Press" rather than the raw key.
+function describeTimerKey(key) {
+  const i = String(key).indexOf(":");
+  if (i === -1) return exerciseName(key);
+  const session = key.slice(0, i);
+  const exId = key.slice(i + 1);
+  const label = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" }[session] || session;
+  return `${label} · ${exerciseName(exId)}`;
+}
+
 function openTimerConflictPrompt(otherTimers, targetExerciseId, proceedFn) {
   const others = otherTimers.map(t => {
-    const nm = typeof exerciseName === "function" ? exerciseName(t.exerciseId) : t.exerciseId;
+    const nm = describeTimerKey(t.exerciseId);
     return `<div class="timer-conflict-row"><span>${escapeAttr(nm)}</span><span class="mono">${fmtDuration(t.seconds)}</span></div>`;
   }).join("");
   const targetName = exerciseName(targetExerciseId);
@@ -645,8 +703,18 @@ function exitSwapMode(container) {
   renderCalendar(container);
 }
 
+// Count planned exercises across every session (plus any legacy flat list).
+function planExerciseCount(plan) {
+  if (!plan) return 0;
+  let n = (plan.exerciseIds || []).length;
+  if (plan.sessions) {
+    Object.values(plan.sessions).forEach(s => { n += (s?.exerciseIds || []).length; });
+  }
+  return n;
+}
+
 function _dayCounts(data, dateStr) {
-  const planned = (data.plans[dateStr]?.exerciseIds || []).length;
+  const planned = planExerciseCount(data.plans[dateStr]);
   const logged = data.logs.filter(l => l.date === dateStr).length;
   return { planned, logged };
 }
@@ -741,12 +809,43 @@ function moveDay(srcDate, dstDate) {
   });
 }
 
-// -------- Stopwatch --------
+// -------- Stopwatch (one per session) --------
 let _swInterval = null;
 
-function renderStopwatch(container, dateStr) {
+// Stopwatch storage is keyed by date, then by session:
+//   data.stopwatch["2026-07-19"] = { morning: {startedAt, endedAt}, evening: {...} }
+// Older builds stored a single flat record per day. We read those as "morning"
+// so nobody loses their existing timings.
+function _swRecord(data, dateStr, sessionKey) {
+  const day = data.stopwatch && data.stopwatch[dateStr];
+  if (!day) return null;
+  if (day.startedAt !== undefined) {
+    // Legacy flat record — belongs to morning.
+    return sessionKey === "morning" ? day : null;
+  }
+  return day[sessionKey] || null;
+}
+
+// Mutate a session's stopwatch record, migrating a legacy flat record first.
+function _swWrite(d, dateStr, sessionKey, mutator) {
+  if (!d.stopwatch) d.stopwatch = {};
+  let day = d.stopwatch[dateStr];
+  if (day && day.startedAt !== undefined) {
+    // Migrate: flat record becomes the morning session.
+    day = { morning: { startedAt: day.startedAt, endedAt: day.endedAt || null } };
+    d.stopwatch[dateStr] = day;
+  }
+  if (!day) { day = {}; d.stopwatch[dateStr] = day; }
+  mutator(day);
+  // Drop the day entry entirely once no session holds a record.
+  if (Object.keys(day).length === 0) delete d.stopwatch[dateStr];
+}
+
+function renderStopwatch(container, dateStr, sessionKey, sessionLabel) {
+  if (!container) return;
+  sessionKey = sessionKey || "morning";
   const data = getData();
-  const sw = (data.stopwatch && data.stopwatch[dateStr]) || null;
+  const sw = _swRecord(data, dateStr, sessionKey);
   const running = !!(sw && sw.startedAt && !sw.endedAt);
 
   function computeElapsed() {
@@ -765,15 +864,18 @@ function renderStopwatch(container, dateStr) {
     if (timeEl) timeEl.textContent = fmt(computeElapsed());
   }
 
-  // Wall-clock label showing IST start / end times.
+  // Wall-clock label showing IST start / end times, scoped to this session.
+  const who = sessionLabel ? `${sessionLabel} · ` : "";
   let clockLabel;
   if (running) {
-    clockLabel = `Started <b>${fmtIST(sw.startedAt)}</b> IST`;
+    clockLabel = `${who}Started <b>${fmtIST(sw.startedAt)}</b> IST`;
   } else if (sw && sw.startedAt && sw.endedAt) {
-    clockLabel = `<b>${fmtIST(sw.startedAt)}</b> → <b>${fmtIST(sw.endedAt)}</b> IST`;
+    clockLabel = `${who}<b>${fmtIST(sw.startedAt)}</b> → <b>${fmtIST(sw.endedAt)}</b> IST`;
   } else {
-    clockLabel = "Not started";
+    clockLabel = `${who}Not started`;
   }
+
+  const startLabel = sessionLabel ? `Start ${sessionLabel}` : "Start Workout";
 
   container.innerHTML = `
     <div class="stopwatch-card">
@@ -782,8 +884,8 @@ function renderStopwatch(container, dateStr) {
         <div class="stopwatch-time ${running ? "running" : ""}">${fmt(computeElapsed())}</div>
       </div>
       <div class="stopwatch-actions">
-        ${!sw || !sw.startedAt ? `<button class="btn btn-primary btn-small" id="sw-start">Start Workout</button>` : ""}
-        ${running ? `<button class="btn btn-danger btn-small" id="sw-stop">Stop Workout</button>` : ""}
+        ${!sw || !sw.startedAt ? `<button class="btn btn-primary btn-small" id="sw-start">${startLabel}</button>` : ""}
+        ${running ? `<button class="btn btn-danger btn-small" id="sw-stop">Stop</button>` : ""}
         ${sw && sw.endedAt ? `<button class="btn btn-ghost btn-small" id="sw-reset">Reset</button>` : ""}
       </div>
     </div>
@@ -792,26 +894,31 @@ function renderStopwatch(container, dateStr) {
   if (_swInterval) { clearInterval(_swInterval); _swInterval = null; }
   if (running) { _swInterval = setInterval(paint, 1000); }
 
+  const rerender = () => renderStopwatch(container, dateStr, sessionKey, sessionLabel);
+
   container.querySelector("#sw-start")?.addEventListener("click", () => {
     save(d => {
-      if (!d.stopwatch) d.stopwatch = {};
-      d.stopwatch[dateStr] = { startedAt: Date.now(), endedAt: null };
+      _swWrite(d, dateStr, sessionKey, day => {
+        day[sessionKey] = { startedAt: Date.now(), endedAt: null };
+      });
     });
-    renderStopwatch(container, dateStr);
+    rerender();
   });
   container.querySelector("#sw-stop")?.addEventListener("click", () => {
     save(d => {
-      if (d.stopwatch && d.stopwatch[dateStr]) {
-        d.stopwatch[dateStr].endedAt = Date.now();
-      }
+      _swWrite(d, dateStr, sessionKey, day => {
+        if (day[sessionKey]) day[sessionKey].endedAt = Date.now();
+      });
     });
     if (_swInterval) { clearInterval(_swInterval); _swInterval = null; }
-    renderStopwatch(container, dateStr);
+    rerender();
   });
   container.querySelector("#sw-reset")?.addEventListener("click", () => {
-    if (!confirm("Clear the stopwatch record for this day?")) return;
-    save(d => { if (d.stopwatch) delete d.stopwatch[dateStr]; });
-    renderStopwatch(container, dateStr);
+    if (!confirm(`Clear the ${sessionLabel || "workout"} stopwatch for this day?`)) return;
+    save(d => {
+      _swWrite(d, dateStr, sessionKey, day => { delete day[sessionKey]; });
+    });
+    rerender();
   });
 }
 
