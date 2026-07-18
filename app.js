@@ -52,10 +52,6 @@ function renderShell() {
             <button class="nav-item ${v.id === currentView ? "active" : ""}" data-view="${v.id}">
               <span class="nav-icon">${v.icon}</span>${v.label}
             </button>`).join("")}
-          <div class="sync-indicator nav-list-sync" id="sync-indicator-mobile">
-            <span class="sync-dot" id="sync-dot-mobile"></span>
-            <span id="sync-text-mobile">…</span>
-          </div>
         </div>
         <div class="nav-tools">
           <button class="theme-toggle" id="theme-toggle" title="Switch theme">☀</button>
@@ -68,6 +64,16 @@ function renderShell() {
       <main class="main-panel" id="main-panel"></main>
     </div>
     <div class="nav-backdrop" id="nav-backdrop"></div>
+    <div class="nav-panel" id="nav-panel">
+      ${VIEWS.map(v => `
+        <button class="nav-item ${v.id === currentView ? "active" : ""}" data-view="${v.id}">
+          <span class="nav-icon">${v.icon}</span>${v.label}
+        </button>`).join("")}
+      <div class="sync-indicator nav-panel-sync" id="sync-indicator-mobile">
+        <span class="sync-dot" id="sync-dot-mobile"></span>
+        <span id="sync-text-mobile">…</span>
+      </div>
+    </div>
     <button class="nav-fab" id="nav-menu-btn" aria-expanded="false" aria-label="Open menu">
       <span class="nav-fab-icon"></span>
     </button>
