@@ -157,6 +157,18 @@ a { color: inherit; }
   overflow-y: auto;
 }
 
+.brand {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.brand:hover .brand-mark { filter: brightness(1.12); }
 .brand-mark {
   font-family: var(--font-display);
   font-weight: 700;
@@ -164,6 +176,8 @@ a { color: inherit; }
   letter-spacing: 0.12em;
   padding: 0 8px;
   position: relative;
+  color: var(--accent);
+  transition: filter 0.15s ease;
 }
 .brand-mark::after {
   content: "";
@@ -252,6 +266,14 @@ a { color: inherit; }
   color: var(--accent);
   box-shadow: 0 0 10px var(--accent-glow);
 }
+
+.nav-tools { display: flex; align-items: center; }
+
+/* Mobile-only chrome — hidden on desktop, where the sidebar shows everything */
+.nav-menu-btn { display: none; }
+.nav-list-header { display: none; }
+.nav-list-sync { display: none; }
+.nav-backdrop { display: none; }
 .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
 .sync-dot.sync-ok { background: var(--good); box-shadow: 0 0 8px var(--good-glow); }
 .sync-dot.sync-syncing { background: var(--accent-2); animation: pulse 1s infinite; }
@@ -1500,53 +1522,135 @@ button.plan-ex-serial.editable:hover {
 /* ========== RESPONSIVE ========== */
 @media (max-width: 980px) {
   .app-shell { grid-template-columns: 1fr; }
+
+  /* ---- Mobile header: brand on the left, theme + Menu on the right ---- */
   .sidenav {
-    position: sticky; top: 0; z-index: 20;
-    height: auto; flex-direction: row; align-items: center;
-    overflow-x: auto; padding: 8px 12px;
+    position: sticky; top: 0; z-index: 40;
+    height: auto; max-height: none; overflow: visible;
+    flex-direction: row; align-items: center; justify-content: space-between;
+    padding: 8px 14px;
     padding-top: max(8px, env(safe-area-inset-top));
-    padding-left: max(12px, env(safe-area-inset-left));
-    padding-right: max(12px, env(safe-area-inset-right));
-    gap: 6px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    gap: 10px;
     background: var(--bg-1);
-    -webkit-overflow-scrolling: touch;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
   }
-  .sidenav::-webkit-scrollbar { display: none; }
-  /* Show the brand wordmark on mobile, but compactly */
-  .brand {
-    flex-shrink: 0;
-    padding-right: 8px;
-    margin-right: 4px;
-    border-right: 1px solid var(--line);
-  }
+  .brand { width: auto; flex: 1 1 auto; min-width: 0; }
   .brand-mark {
-    font-size: 13px;
-    letter-spacing: 0.1em;
-    padding: 0 4px 0 0;
+    font-size: 15px;
+    letter-spacing: 0.11em;
+    padding: 0;
   }
-  .brand-mark::after {
-    display: none;   /* no room for the accent bar in the compact header */
-  }
-  .brand-sub { display: none; }   /* subtitle hidden on mobile */
-  .sync-indicator { display: none; }
+  .brand-mark::after { display: none; }
+  .brand-sub { display: none; }
+  .sidenav > .sync-indicator { display: none; }
+
+  .nav-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .theme-toggle {
     align-self: center;
-    margin: 0 0 0 4px;
-    width: 32px; height: 32px;
+    margin: 0;
+    width: 34px; height: 34px;
     font-size: 14px;
     flex-shrink: 0;
   }
-  .nav-list { flex-direction: row; flex: none; gap: 4px; }
+  .nav-menu-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px;
+    min-height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    max-width: 46vw;
+  }
+  .nav-menu-btn:hover, .nav-menu-btn:active { box-shadow: 0 0 10px var(--accent-glow); }
+  .nav-menu-label {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .nav-menu-icon { font-size: 14px; line-height: 1; flex-shrink: 0; }
+
+  /* ---- Floating nav window ---- */
+  .nav-backdrop {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 58;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+  body.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
+
+  .nav-list {
+    position: fixed;
+    left: max(14px, env(safe-area-inset-left));
+    right: max(14px, env(safe-area-inset-right));
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    flex-direction: column;
+    flex: none;
+    gap: 3px;
+    padding: 10px;
+    max-height: 76vh;
+    overflow-y: auto;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px var(--accent-soft);
+    z-index: 60;
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    pointer-events: none;
+    transform-origin: bottom center;
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  body.nav-open .nav-list {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .nav-list-header {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    padding: 2px 6px 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-list-header .btn-icon { font-size: 18px; padding: 0 6px; }
+
   .nav-item {
-    padding: 8px 14px;
-    border-radius: 18px;
-    white-space: nowrap;
-    min-height: 36px;
-    font-size: 13px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    min-height: 46px;
+    font-size: 14.5px;
+    justify-content: flex-start;
   }
   .nav-item.active::before { display: none; }
-  .nav-item.active { background: var(--accent-soft); border: 1px solid var(--accent); }
-  .nav-icon { display: none; }
+  .nav-item.active {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .nav-icon { display: inline-flex; opacity: 0.85; }
+
+  .nav-list-sync {
+    display: flex;
+    margin-top: 8px;
+    padding: 10px 8px 2px;
+    border-top: 1px solid var(--line);
+    border-bottom: none;
+  }
 
   .main-panel {
     padding: 16px;
@@ -1703,6 +1807,8 @@ button.plan-ex-serial.editable:hover {
 /* Standalone (installed as home-screen app) */
 @media (display-mode: standalone) {
   body { background: var(--bg-0); }
+}
+@media (display-mode: standalone) and (max-width: 980px) {
   .sidenav { padding-top: max(12px, env(safe-area-inset-top)); }
 }
 
