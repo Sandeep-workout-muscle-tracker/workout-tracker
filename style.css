@@ -270,8 +270,7 @@ a { color: inherit; }
 .nav-tools { display: flex; align-items: center; }
 
 /* Mobile-only chrome — hidden on desktop, where the sidebar shows everything */
-.nav-menu-btn { display: none; }
-.nav-list-header { display: none; }
+.nav-fab { display: none; }
 .nav-list-sync { display: none; }
 .nav-backdrop { display: none; }
 .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
@@ -1555,59 +1554,71 @@ button.plan-ex-serial.editable:hover {
     font-size: 14px;
     flex-shrink: 0;
   }
-  .nav-menu-btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 7px 12px;
-    min-height: 34px;
-    border-radius: 999px;
-    border: 1px solid var(--accent);
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-family: var(--font-body);
-    font-size: 12.5px;
-    font-weight: 600;
+  /* ---- Floating action button ---- */
+  .nav-fab {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: calc(22px + env(safe-area-inset-bottom));
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(180deg, var(--accent-hi), var(--accent-lo));
+    color: #fff;
     cursor: pointer;
-    transition: all 0.15s ease;
-    max-width: 46vw;
+    z-index: 61;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.42), 0 0 0 6px var(--accent-soft);
+    transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.2s ease;
   }
-  .nav-menu-btn:hover, .nav-menu-btn:active { box-shadow: 0 0 10px var(--accent-glow); }
-  .nav-menu-label {
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  .nav-fab:active { transform: scale(0.94); }
+  body.nav-open .nav-fab {
+    transform: rotate(90deg);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.42), 0 0 0 8px var(--accent-soft);
   }
-  .nav-menu-icon { font-size: 14px; line-height: 1; flex-shrink: 0; }
+  .nav-fab-icon {
+    font-size: 22px; line-height: 1; font-weight: 400;
+    display: block;
+    transition: transform 0.2s ease;
+  }
+  .nav-fab-icon::before { content: "\2630"; }            /* ☰ */
+  body.nav-open .nav-fab-icon::before { content: "\2715"; }  /* ✕ */
+  body.nav-open .nav-fab-icon { transform: rotate(-90deg); }
 
-  /* ---- Floating nav window ---- */
+  /* ---- Floating nav panel, anchored above the button ---- */
   .nav-backdrop {
     display: block;
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.42);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     z-index: 58;
     opacity: 0; pointer-events: none;
-    transition: opacity 0.18s ease;
+    transition: opacity 0.2s ease;
   }
   body.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
 
   .nav-list {
     position: fixed;
-    left: max(14px, env(safe-area-inset-left));
-    right: max(14px, env(safe-area-inset-right));
-    bottom: calc(18px + env(safe-area-inset-bottom));
+    right: max(18px, env(safe-area-inset-right));
+    left: auto;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    width: min(300px, 68vw);
     flex-direction: column;
     flex: none;
-    gap: 3px;
-    padding: 10px;
-    max-height: 76vh;
+    gap: 2px;
+    padding: 12px;
+    max-height: 68vh;
     overflow-y: auto;
     background: var(--bg-2);
-    border: 1px solid var(--line-strong);
-    border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px var(--accent-soft);
+    border: 1px solid var(--line-bright);
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55);
     z-index: 60;
     opacity: 0;
-    transform: translateY(14px) scale(0.97);
+    transform: translateY(12px) scale(0.94);
     pointer-events: none;
-    transform-origin: bottom center;
-    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1);
+    transform-origin: bottom right;
+    transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
   }
   body.nav-open .nav-list {
     opacity: 1;
@@ -1615,46 +1626,36 @@ button.plan-ex-serial.editable:hover {
     pointer-events: auto;
   }
 
-  .nav-list-header {
-    display: flex; align-items: center; justify-content: space-between;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--text-dim);
-    padding: 2px 6px 8px;
-    margin-bottom: 4px;
-    border-bottom: 1px solid var(--line);
-  }
-  .nav-list-header .btn-icon { font-size: 18px; padding: 0 6px; }
-
   .nav-item {
-    padding: 12px 14px;
-    border-radius: 12px;
-    min-height: 46px;
-    font-size: 14.5px;
+    padding: 13px 14px;
+    border-radius: 14px;
+    min-height: 50px;
+    font-size: 15px;
+    gap: 14px;
     justify-content: flex-start;
+    border: 1px solid transparent;
   }
   .nav-item.active::before { display: none; }
   .nav-item.active {
     background: var(--accent-soft);
-    border: 1px solid var(--accent);
+    border-color: var(--accent);
     color: var(--accent);
     font-weight: 600;
   }
-  .nav-icon { display: inline-flex; opacity: 0.85; }
+  .nav-icon { display: inline-flex; opacity: 0.9; font-size: 17px; width: 20px; justify-content: center; }
 
   .nav-list-sync {
     display: flex;
-    margin-top: 8px;
+    margin-top: 6px;
     padding: 10px 8px 2px;
     border-top: 1px solid var(--line);
     border-bottom: none;
+    font-size: 10px;
   }
 
   .main-panel {
     padding: 16px;
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
     max-width: 100%;
@@ -1800,7 +1801,7 @@ button.plan-ex-serial.editable:hover {
 @media (max-width: 400px) {
   .dashboard-grid { grid-template-columns: 1fr; }
   .stat-value { font-size: 24px; }
-  .main-panel { padding: 12px; padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+  .main-panel { padding: 12px; padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
   .view-header h1 { font-size: 20px; }
 }
 
