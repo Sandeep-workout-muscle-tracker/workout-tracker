@@ -271,7 +271,7 @@ a { color: inherit; }
 
 /* Mobile-only chrome — hidden on desktop, where the sidebar shows everything */
 .nav-fab { display: none; }
-.nav-list-sync { display: none; }
+.nav-panel { display: none; }
 .nav-backdrop { display: none; }
 .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
 .sync-dot.sync-ok { background: var(--good); box-shadow: 0 0 8px var(--good-glow); }
@@ -1597,14 +1597,19 @@ button.plan-ex-serial.editable:hover {
   }
   body.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
 
-  .nav-list {
+  /* The sidebar's own list is desktop-only. The floating panel below is a
+     body-level sibling of the backdrop, so no ancestor stacking context
+     (the sticky header) can trap it underneath. */
+  .nav-list { display: none; }
+
+  .nav-panel {
+    display: flex;
     position: fixed;
     right: max(18px, env(safe-area-inset-right));
     left: auto;
     bottom: calc(96px + env(safe-area-inset-bottom));
     width: min(300px, 68vw);
     flex-direction: column;
-    flex: none;
     gap: 2px;
     padding: 12px;
     max-height: 68vh;
@@ -1620,7 +1625,7 @@ button.plan-ex-serial.editable:hover {
     transform-origin: bottom right;
     transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
   }
-  body.nav-open .nav-list {
+  body.nav-open .nav-panel {
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: auto;
@@ -1644,7 +1649,7 @@ button.plan-ex-serial.editable:hover {
   }
   .nav-icon { display: inline-flex; opacity: 0.9; font-size: 17px; width: 20px; justify-content: center; }
 
-  .nav-list-sync {
+  .nav-panel-sync {
     display: flex;
     margin-top: 6px;
     padding: 10px 8px 2px;
