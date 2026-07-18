@@ -772,6 +772,78 @@ a { color: inherit; }
 .cal-legend-item { display: flex; align-items: center; gap: 5px; }
 .cal-legend-dot { width: 9px; height: 9px; border-radius: 50%; }
 
+/* ---- Currently-open day ---- */
+.cal-cell.cal-selected {
+  border-color: var(--accent) !important;
+  border-width: 2px;
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 0 14px var(--accent-glow);
+  position: relative;
+  z-index: 1;
+}
+.cal-cell.cal-selected .cal-day-num { color: var(--accent); font-weight: 700; }
+
+/* ---- Session tabs (Morning / Afternoon / Evening) ---- */
+.session-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.session-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-bright);
+  background: var(--bg-2);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.session-tab:hover { border-color: var(--line-strong); color: var(--text); }
+.session-tab.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+.session-tab-icon { font-size: 13px; line-height: 1; }
+.session-tab-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-4);
+  color: var(--text-muted);
+}
+.session-tab.active .session-tab-count { background: var(--accent); color: #fff; }
+.session-tab-done {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--good-soft);
+  color: var(--good);
+}
+.session-tab.has-logs { border-color: rgba(74,222,128,0.4); }
+.session-tab.has-logs.active { border-color: var(--accent); }
+
+.session-target-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 8px;
+}
+
 /* ---- Swap-mode banner + source-cell + pickable cells ---- */
 .swap-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1547,6 +1619,12 @@ button.plan-ex-serial.editable:hover {
   .main-cat-tab { font-size: 12px; padding: 8px 14px; }
   .sub-cat-chips { flex-wrap: wrap; }
   .sub-cat-chip { font-size: 11px; padding: 5px 10px; }
+
+  /* Session tabs fit three-across on a phone */
+  .session-tabs { gap: 4px; }
+  .session-tab { padding: 7px 10px; font-size: 11.5px; gap: 4px; flex: 1 1 auto; justify-content: center; }
+  .session-tab-count, .session-tab-done { font-size: 9px; padding: 1px 5px; }
+  .session-target-hint { display: block; margin-left: 0; margin-top: 3px; }
 
   /* Day panel - reduce padding on mobile */
   .day-panel { padding: 14px; }
