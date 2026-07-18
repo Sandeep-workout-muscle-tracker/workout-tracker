@@ -135,16 +135,36 @@ function updateNavMenuLabel() {
 // Switch views WITHOUT rebuilding the sidenav — this preserves the horizontal
 // scroll position on mobile so tabs like Library/Nutrition don't snap back to
 // the start after tapping.
+// Scroll the page back to the top. Instant when we've just swapped the whole
+// view (the content is new anyway), smooth when we're already on that page so
+// tapping the wordmark feels like a deliberate "back to top".
+function scrollToTop(smooth) {
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: (smooth && !reduce) ? "smooth" : "auto" });
+  } catch (e) {
+    window.scrollTo(0, 0);
+  }
+  // Belt and braces in case a container ever becomes the scroller.
+  const mp = document.getElementById("main-panel");
+  if (mp && mp.scrollTop) mp.scrollTop = 0;
+  if (document.scrollingElement && document.scrollingElement.scrollTop && !smooth) {
+    document.scrollingElement.scrollTop = 0;
+  }
+}
+
 function switchToView(viewId) {
-  if (viewId === currentView) return;
-  currentView = viewId;
-  document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.view === viewId);
-  });
-  updateNavMenuLabel();
-  renderView();
-  // Scroll the main content to the top on nav change (nice UX touch)
-  window.scrollTo(0, 0);
+  const changed = viewId !== currentView;
+  if (changed) {
+    currentView = viewId;
+    document.querySelectorAll(".nav-item").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.view === viewId);
+    });
+    updateNavMenuLabel();
+    renderView();
+  }
+  scrollToTop(!changed);
+  return changed;
 }
 
 function renderView() {
