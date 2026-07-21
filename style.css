@@ -35,9 +35,14 @@
 
   --danger: #EF4444;
 
-  --radius: 8px;
-  --radius-sm: 5px;
-  --radius-lg: 14px;
+  --radius: 3px;
+  --radius-sm: 2px;
+  --radius-lg: 4px;
+  /* Blueprint corner brackets */
+  --bp-corner: 9px;          /* arm length of each bracket */
+  --bp-inset: -1px;          /* sit on the card's border line */
+  --bp-color: var(--accent);
+  --bp-weight: 1.5px;
 
   --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
   --font-body: "Inter", "IBM Plex Sans", ui-sans-serif, sans-serif;
@@ -289,7 +294,32 @@ a { color: inherit; }
 }
 
 /* ========== VIEW HEADERS ========== */
-.view-header { margin-bottom: 28px; }
+.view-header {
+  margin-bottom: 28px;
+  position: relative;
+  padding-left: 14px;
+}
+/* Accent spine down the left of every header — a blueprint margin rule */
+.view-header::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 3px; bottom: 3px;
+  width: 3px;
+  background: linear-gradient(180deg, var(--accent), transparent);
+}
+/* Optional eyebrow: <div class="view-header" data-eyebrow="SECTION 01"> */
+.view-header[data-eyebrow]::after {
+  content: attr(data-eyebrow);
+  display: block;
+  order: -1;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.view-header { display: flex; flex-direction: column; }
 .view-header h1 {
   font-family: var(--font-display);
   font-size: 28px;
@@ -298,6 +328,15 @@ a { color: inherit; }
   letter-spacing: -0.01em;
 }
 .view-sub { color: var(--text-muted); margin: 0; font-size: 14px; }
+
+/* Reusable schematic label — mono, uppercase, wide tracking */
+.schematic-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
 
 /* ========== BUTTONS ========== */
 .btn {
@@ -386,6 +425,46 @@ a { color: inherit; }
   font-weight: 500;
 }
 
+/* ========== BLUEPRINT CARD SYSTEM ==========
+   The schematic signature: sharp-cornered panels framed by four right-angle
+   corner brackets. Drawn on ::before (the brackets) so no extra markup is
+   needed — any element with .blueprint, or the card classes below, gets them.
+   Uses a conic-gradient corner trick that stays crisp at any size. */
+.blueprint,
+.card,
+.card-elev,
+.stat-tile,
+.chart-card,
+.blueprint-panel {
+  position: relative;
+}
+.blueprint::before,
+.card::before,
+.card-elev::before,
+.stat-tile::after,
+.chart-card::before,
+.blueprint-panel::before {
+  content: "";
+  position: absolute;
+  inset: var(--bp-inset);
+  pointer-events: none;
+  z-index: 1;
+  /* Four L-shaped brackets, one per corner, built from layered gradients. */
+  background:
+    /* top-left */
+    linear-gradient(to right, var(--bp-color) var(--bp-corner), transparent 0) top left / calc(var(--bp-corner) + var(--bp-weight)) var(--bp-weight) no-repeat,
+    linear-gradient(to bottom, var(--bp-color) var(--bp-corner), transparent 0) top left / var(--bp-weight) calc(var(--bp-corner) + var(--bp-weight)) no-repeat,
+    /* top-right */
+    linear-gradient(to left, var(--bp-color) var(--bp-corner), transparent 0) top right / calc(var(--bp-corner) + var(--bp-weight)) var(--bp-weight) no-repeat,
+    linear-gradient(to bottom, var(--bp-color) var(--bp-corner), transparent 0) top right / var(--bp-weight) calc(var(--bp-corner) + var(--bp-weight)) no-repeat,
+    /* bottom-left */
+    linear-gradient(to right, var(--bp-color) var(--bp-corner), transparent 0) bottom left / calc(var(--bp-corner) + var(--bp-weight)) var(--bp-weight) no-repeat,
+    linear-gradient(to top, var(--bp-color) var(--bp-corner), transparent 0) bottom left / var(--bp-weight) calc(var(--bp-corner) + var(--bp-weight)) no-repeat,
+    /* bottom-right */
+    linear-gradient(to left, var(--bp-color) var(--bp-corner), transparent 0) bottom right / calc(var(--bp-corner) + var(--bp-weight)) var(--bp-weight) no-repeat,
+    linear-gradient(to top, var(--bp-color) var(--bp-corner), transparent 0) bottom right / var(--bp-weight) calc(var(--bp-corner) + var(--bp-weight)) no-repeat;
+}
+
 /* ========== CARDS ========== */
 .card {
   background: var(--bg-2);
@@ -414,11 +493,13 @@ a { color: inherit; }
   border-radius: var(--radius);
   padding: 18px;
   position: relative;
-  overflow: hidden;
 }
+.stat-tile::after { inset: 0; }   /* brackets drawn just inside the tile edge */
+.stat-tile > .stat-accent-bar,
 .stat-tile::before {
-  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  content: ""; position: absolute; top: 0; left: 3px; right: 3px; height: 2px;
   background: linear-gradient(90deg, var(--accent), transparent);
+  z-index: 2;
 }
 .stat-label {
   font-family: var(--font-mono);
