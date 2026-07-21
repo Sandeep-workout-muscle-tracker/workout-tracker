@@ -181,7 +181,7 @@ function renderView() {
 // ---------------- DASHBOARD VIEW ----------------
 function renderDashboardView(panel) {
   panel.innerHTML = `
-    <div class="view-header">
+    <div class="view-header" data-eyebrow="Overview · 001">
       <h1>Dashboard</h1>
       <p class="view-sub">At-a-glance overview of your training volume, exercise trends and muscle-group balance.</p>
     </div>
@@ -199,7 +199,7 @@ let selectedMainCategory = "chest";  // default landing category
 
 function renderTrainView(panel) {
   panel.innerHTML = `
-    <div class="view-header">
+    <div class="view-header" data-eyebrow="Muscle Index · 002">
       <h1>Train</h1>
       <p class="view-sub">Pick a main muscle group, then drill into the sub-muscle you want to train.</p>
     </div>
@@ -351,7 +351,7 @@ function renderTrainView(panel) {
 // ---------------- HISTORY VIEW ----------------
 function renderHistoryView(panel) {
   panel.innerHTML = `
-    <div class="view-header">
+    <div class="view-header" data-eyebrow="Log Archive · 003">
       <h1>History &amp; Progress</h1>
       <p class="view-sub">Everything you've logged, plus a trend line for any exercise. Click ✎ to edit, × to delete.</p>
     </div>
@@ -379,7 +379,7 @@ function renderHistoryView(panel) {
 // ---------------- CALENDAR VIEW ----------------
 function renderCalendarView(panel) {
   panel.innerHTML = `
-    <div class="view-header">
+    <div class="view-header" data-eyebrow="Schedule · 004">
       <h1>Calendar</h1>
       <p class="view-sub">Plan ahead, log what you did, track workout duration. Everything auto-saves.</p>
     </div>
@@ -391,7 +391,7 @@ function renderCalendarView(panel) {
 // ---------------- NUTRITION VIEW ----------------
 function renderNutritionView(panel) {
   panel.innerHTML = `
-    <div class="view-header">
+    <div class="view-header" data-eyebrow="Intake · 005">
       <h1>Nutrition Calculator</h1>
       <p class="view-sub">Browse foods by category, add by grams or count, see macros and full micronutrients.</p>
     </div>
@@ -404,7 +404,7 @@ function renderNutritionView(panel) {
 function renderSettingsView(panel) {
   const s = getSettings();
   panel.innerHTML = `
-    <div class="view-header">
+    <div class="view-header" data-eyebrow="System · 006">
       <h1>Settings</h1>
       <p class="view-sub">Connect a GitHub repo to sync your data across browsers and devices.</p>
     </div>
